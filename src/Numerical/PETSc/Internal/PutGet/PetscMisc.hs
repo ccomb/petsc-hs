@@ -1,39 +1,58 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, RankNTypes#-}
 {-# LANGUAGE CPP #-}
------------------------------------------------------------------------------
--- |
--- Module      :  Numerical.PETSc.Internal.PutGet.PetscMisc
--- Copyright   :  (c) Marco Zocca 2015
--- License     :  LGPL3
--- Maintainer  :  zocca . marco . gmail . com
--- Stability   :  experimental
---
--- | PETSc misc. functions, Mid-level interface
---
------------------------------------------------------------------------------
-module Numerical.PETSc.Internal.PutGet.PetscMisc
-       (
-         petscTime,
-         petscGetCPUTime, petscGetFlops,
-         petscLogDefaultBegin,
-         petscLogView, petscLogStageRegister, petscLogStagePush, petscLogStagePop,
-         petscClassIdRegister, petscLogEventRegister,
-         petscLogEventBegin0, petscLogEventEnd0,
-         commWorld, commSelf,
-         commWorldC, commSelfC,
-         mkMPIComm, getMPICommSize, getMPICommRank,
-         -- withMPIEnv,
-         petscOptionsView, petscOptionsSetValue,
-         petscInit0, petscInit, petscFin,
-         withPetsc0, withPetsc,
-         withPetsc0MpiComm, withPetscMpiComm,
-         isMpiRoot
-       )
-       where
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+
+{- |
+Module      :  Numerical.PETSc.Internal.PutGet.PetscMisc
+Copyright   :  (c) Marco Zocca 2015
+License     :  LGPL3
+Maintainer  :  zocca . marco . gmail . com
+Stability   :  experimental
+
+| PETSc misc. functions, Mid-level interface
+-}
+module Numerical.PETSc.Internal.PutGet.PetscMisc (
+  petscTime,
+  petscGetCPUTime,
+  petscGetFlops,
+  petscLogDefaultBegin,
+  petscLogView,
+  petscLogStageRegister,
+  petscLogStagePush,
+  petscLogStagePop,
+  petscClassIdRegister,
+  petscLogEventRegister,
+  petscLogEventBegin0,
+  petscLogEventEnd0,
+  commWorld,
+  commSelf,
+  commWorldC,
+  commSelfC,
+  mkMPIComm,
+  getMPICommSize,
+  getMPICommRank,
+  -- withMPIEnv,
+  petscOptionsView,
+  petscOptionsSetValue,
+  petscInit0,
+  petscInit,
+  petscFin,
+  withPetsc0,
+  withPetsc,
+  withPetsc0MpiComm,
+  withPetscMpiComm,
+  isMpiRoot,
+)
+where
+
+import Numerical.PETSc.Internal.Exception
 import Numerical.PETSc.Internal.InlineC
 import Numerical.PETSc.Internal.Types
-import Numerical.PETSc.Internal.Exception
 import Numerical.PETSc.Internal.Utils
 
 import Data.List (intercalate)
@@ -42,14 +61,15 @@ import Data.List.Split (splitOn, splitOneOf)
 import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 
 import Foreign
-import Foreign.ForeignPtr
-import Foreign.C.Types
 import Foreign.C.String
+import Foreign.C.Types
+import Foreign.ForeignPtr
 
 import System.IO.Unsafe (unsafePerformIO)
 
 import Control.Applicative ((<$>))
 import Control.Monad
+
 -- import Control.Concurrent
 import Control.Exception
 
@@ -57,12 +77,9 @@ import Control.Exception
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 
-import Control.Arrow ((***), (&&&))
+import Control.Arrow ((&&&), (***))
 
 import System.Process (readProcess)
-
-
-
 
 -- a `reader` bracket for reading MPI environmemt information
 
@@ -71,19 +88,14 @@ import System.Process (readProcess)
 --   return $ f $ getMPICommSize c
 --   -- let
 --   --   (cs, cr) = (getMPICommSize &&& getMPICommRank) c
-               
+
 --   -- lift (f cs cr)
 --   -- lift (f c')
-
-
-
 
 -- * FLOPs
 
 petscGetFlops :: IO PetscLogDouble
 petscGetFlops = chk1 petscGetFlops'
-
-
 
 -- * timing
 
@@ -92,11 +104,6 @@ petscTime = chk1 petscTime'
 
 petscGetCPUTime :: IO PetscLogDouble
 petscGetCPUTime = chk1 petscGetCPUTime'
-
-
-
-
-
 
 -- * logging
 
@@ -129,16 +136,11 @@ petscLogEventBegin0 = chk0 . petscLogEventBegin0'
 petscLogEventEnd0 :: PetscLogEvent -> IO ()
 petscLogEventEnd0 = chk0 . petscLogEventEnd0'
 
-
 -- withPetscLogEvent0 name cid io = do
 --   ev <- petscLogEventRegister name cid
 --   petscLogEventBegin0 ev
 --   io
 --   petscLogEventEnd0 ev
-
-
-
-
 
 -- * MPI
 
@@ -156,7 +158,6 @@ mpiCommSize, mpiCommRank :: Comm -> Int
 mpiCommSize c = unsafePerformIO $ fi <$> chk1 (mpiCommSize' c)
 mpiCommRank c = unsafePerformIO $ fi <$> chk1 (mpiCommRank' c)
 
-
 mkMpiCommSize :: Comm -> MpiCommSize
 mkMpiCommSize c = MkMpiCommSz (mpiCommSize c)
 
@@ -171,14 +172,7 @@ getMPICommSize, getMPICommRank :: MPIComm -> Int
 getMPICommSize c = fromEnum (commSize c)
 getMPICommRank c = fromEnum (commRank c)
 
-
-  
-
-
-
-
 -- * misc PETSc
-
 
 -- options handling
 
@@ -187,25 +181,24 @@ petscOptionsView vi = chk0 $ petscOptionsView0' vi
 
 petscOptionsSetValue :: OptionName -> String -> IO ()
 petscOptionsSetValue opt val = chk0 $ petscOptionsSetValue0' (helper opt) val
-  where
-     helper o@(x:_) | x=='-' = o
-                    | otherwise = '-':o
-     helper [] = error "petscOptionsSetValue : no option name supplied" 
+ where
+  helper o@(x : _)
+    | x == '-' = o
+    | otherwise = '-' : o
+  helper [] = error "petscOptionsSetValue : no option name supplied"
 
 -- -- NB : all PETSc functions must appear within a withPetsc* bracket
 
 petscInit0 :: IO ()
-petscInit0 = 
+petscInit0 =
   chk0 petscInit0' >> putStrLn (petscHeader ++ " with default options\n")
 
 petscFin :: IO ()
 petscFin =
   chk0 petscFin' >> putStrLn ("\nPETSc : finalized\n" ++ sep)
 
-
 withPetsc0 :: IO a -> IO a
 withPetsc0 = bracket_ petscInit0 petscFin
-
 
 withPetsc0MpiComm :: MPIComm -> (MpiCommSize -> MpiCommRank -> IO a) -> IO a
 withPetsc0MpiComm c act =
@@ -214,11 +207,10 @@ withPetsc0MpiComm c act =
         rank = commRank c
     act size rank
 
-
 petscInit ::
-  [String] ->   -- "argv" list of strings
-  String ->     -- options string
-  String ->     -- help string
+  [String] -> -- "argv" list of strings
+  String -> -- options string
+  String -> -- help string
   IO ()
 petscInit args opts help = do
   chk0 (petscInitialize1 args opts help)
@@ -228,74 +220,69 @@ withPetsc ::
   [String] -> String -> String -> IO a -> IO a
 withPetsc a o h = bracket_ (petscInit a o h) petscFin
 
-withPetscMpiComm :: [String] -> String -> String ->
-     MPIComm ->
-     (MpiCommSize -> MpiCommRank -> IO a) -> 
-     IO a
+withPetscMpiComm ::
+  [String] ->
+  String ->
+  String ->
+  MPIComm ->
+  (MpiCommSize -> MpiCommRank -> IO a) ->
+  IO a
 withPetscMpiComm a o h c act =
   withPetsc a o h $ do
     let size = commSize c
         rank = commRank c
     act size rank
 
-
 isMpiRoot :: MPIComm -> Bool
 isMpiRoot c = getMPICommRank c == 0
 
-
-
-
-
--- | git commit hash (for debugging)
--- Hp: `git` command is available
-{-# noinline gitHash #-}
+{- | git commit hash (for debugging)
+Hp: `git` command is available
+-}
+{-# NOINLINE gitHash #-}
 gitHash :: String
-gitHash = unsafePerformIO $ readProcess "git" ["rev-parse","--verify","HEAD"] []
-
-
-
+gitHash = unsafePerformIO $ readProcess "git" ["rev-parse", "--verify", "HEAD"] []
 
 -- | header
-
-sep, petscHeader :: String 
+sep, petscHeader :: String
 sep = "======"
-
 petscHeader =
-  sep ++ "\npetsc-hs : Haskell bindings for PETSc" ++
-  "\ncommit " ++ gitHash ++ 
-  "\nPETSc " ++ petscVersionString ++ ": initialized"
-
+  sep
+    ++ "\npetsc-hs : Haskell bindings for PETSc"
+    ++ "\ncommit "
+    ++ gitHash
+    ++ "\nPETSc "
+    ++ petscVersionString
+    ++ ": initialized"
 
 -- | Version string
-
 {-# NOINLINE petscVersionString #-}
 petscVersionString :: String
-petscVersionString = 
+petscVersionString =
   case length strs of
-    n | n > 9 -> ver ++ ", rel. " ++ date
-      | n > 3 -> strs!!3 ++ " (version parsing simplified)"
+    n
+      | n > 9 -> ver ++ ", rel. " ++ date
+      | n > 3 -> strs !! 3 ++ " (version parsing simplified)"
       | otherwise -> vstrRaw ++ " (raw version string)"
-  where
-    ver = strs!!3
-    date = unwords [strs!!5, strs!!7, strs!!9]
-    strs = splitOneOf ", " vstrRaw
-    vstrRaw = unsafePerformIO (petscGetVersion 50)
+ where
+  ver = strs !! 3
+  date = unwords [strs !! 5, strs !! 7, strs !! 9]
+  strs = splitOneOf ", " vstrRaw
+  vstrRaw = unsafePerformIO (petscGetVersion 50)
 
 petscGetVersion :: Int -> IO String
 petscGetVersion l = do
-  fp <- mallocPlainForeignPtrBytes l  -- see Data.Bytestring.Internal.create
+  fp <- mallocPlainForeignPtrBytes l -- see Data.Bytestring.Internal.create
   withForeignPtr fp $ \p -> do
     pgv p (toCInt l)
     peekCString p
-    where
-     pgv v sz = chk0 (petscGetVersion0' v sz)
+ where
+  pgv v sz = chk0 (petscGetVersion0' v sz)
 
-
-
-
--- | Error messages :
--- text strings directly from PETSc 
--- -- usually we generate them using the CInt return code (see Internal.Exception)
+{- | Error messages :
+text strings directly from PETSc
+-- usually we generate them using the CInt return code (see Internal.Exception)
+-}
 
 {-
 BROKEN :
