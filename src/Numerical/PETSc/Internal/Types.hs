@@ -43,14 +43,10 @@ showDropN n = drop n . map toLower . show
 
 
 petscBoolCToBool :: PetscBool -> Bool
-petscBoolCToBool = p' . petscBoolFromC where
-  p' PetscFalse = False
-  p' _          = True
+petscBoolCToBool = petscBoolFromC
 
 boolToPetscBoolC :: Bool -> PetscBool
-boolToPetscBoolC = petscBoolToC . p where
-  p False = PetscFalse
-  p True = PetscTrue
+boolToPetscBoolC = petscBoolToC
 
 
 

@@ -50,10 +50,13 @@ library
                        Numerical.PETSc.Internal.PutGet.SlepcMisc
                        Numerical.PETSc.Internal.PutGet.EPS
                        Numerical.PETSc.Internal.PutGet.SVD
-                       Numerical.PETSc.Internal.PutGet
+                       Numerical.PETSc.Internal.PutGet.SF
                        Numerical.PETSc.Internal.Sparse
                        Numerical.PETSc.Internal.Storable.Common
                        Numerical.PETSc.Internal.Storable.Vector
+                       Numerical.PETSc.Internal.Storable.Matrix
+                       Numerical.PETSc.Internal.Storable.StorableContainer
+                       Numerical.PETSc.Internal.Storable.Store
                        Numerical.PETSc.Internal.Types
                        Numerical.PETSc.Internal.C2HsGen.TypesC2HsGen
                        Numerical.PETSc.Internal.Utils
