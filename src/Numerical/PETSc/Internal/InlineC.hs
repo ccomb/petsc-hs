@@ -499,7 +499,7 @@ vecRestoreArray1d' x m mstart arr =
 
 -- TODO row (block) indexing : these should not be interpreted as mere Ints but as indices, e.g. FEM mesh nodes -- see repa 
 
-vecGetOwnershipRange1 :: Vec -> IO ((CInt, CInt), CInt)
+vecGetOwnershipRange1 :: Vec -> IO ((PetscInt_, PetscInt_), CInt)
 vecGetOwnershipRange1 a = withPtr2 $ \rmin rmax -> 
        [C.exp|int{VecGetOwnershipRange($(Vec a), $(PetscInt *rmin), $(PetscInt * rmax) )}|] 
     
@@ -827,7 +827,7 @@ matCreateMPIAIJWithArrays0' cc m n mm nn ip jp aap =
                                     $(const PetscInt* ip), $(const PetscInt* jp),
                                     $(const PetscScalar* aap), 
                                     $(Mat* mat))}|] )
-    where c = unComm cc 
+    where c = unComm cc
 
 
 matView' :: Mat -> PetscViewer -> IO CInt
