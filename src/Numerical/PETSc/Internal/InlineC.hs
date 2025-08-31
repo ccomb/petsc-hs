@@ -696,7 +696,7 @@ matCreateSeqAIJconstNZperRow1 cc m' n' nz' =
                                        NULL ,
                                        $(Mat *mat))}|]) 
   where c = unComm cc
-        (m, n, nz) = (toCInt m', toCInt n', toCInt nz')
+        (m, n, nz) = (toCLong m', toCLong n', toCLong nz')
 
 
 matTranspose' :: Mat -> MatReuse_ -> IO (Mat, CInt)
@@ -823,7 +823,7 @@ matCreateMPIAIJWithArrays0' cc m n mm nn ip jp aap =
                                     $(const PetscInt* ip), $(const PetscInt* jp),
                                     $(const PetscScalar* aap), 
                                     $(Mat* mat))}|] )
-    where c = toCInt $ fromIntegral $ unComm cc 
+    where c = toCLong $ fromIntegral $ unComm cc 
 
 
 matView' :: Mat -> PetscViewer -> IO CInt
@@ -1565,7 +1565,7 @@ matNullSpaceCreate' cc hasc n vecs = withPtr $ \sp ->
    [C.exp|int{MatNullSpaceCreate($(int c),$(PetscBool hascc),$(PetscInt nn),$(const Vec* vecsp),$(MatNullSpace* sp))}|]
   where c = unComm cc
         hascc = boolToPetscBoolC hasc
-        nn = toCInt n
+        nn = toCLong n
 
 matNullSpaceDestroy' :: MatNullSpace -> IO CInt
 matNullSpaceDestroy' sp = with sp $ \spp ->
@@ -2271,7 +2271,7 @@ kspSetTolerances' ksp rtol abstol dtol maxits = [C.exp|int{KSPSetTolerances($(KS
   rtolc = CDouble rtol
   abstolc = CDouble abstol
   dtolc = CDouble dtol
-  maxitsc = toCInt maxits
+  maxitsc = toCLong maxits
 
 -- PETSC_EXTERN PetscErrorCode KSPSetInitialGuessNonzero(KSP,PetscBool );
 kspSetInitialGuessNonzero' :: KSP -> Bool -> IO CInt

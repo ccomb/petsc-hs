@@ -258,17 +258,9 @@ petscHeader =
 -- | Version string
 {-# NOINLINE petscVersionString #-}
 petscVersionString :: String
-petscVersionString =
-  case length strs of
-    n
-      | n > 9 -> ver ++ ", rel. " ++ date
-      | n > 3 -> strs !! 3 ++ " (version parsing simplified)"
-      | otherwise -> vstrRaw ++ " (raw version string)"
+petscVersionString = vstrRaw
  where
-  ver = strs !! 3
-  date = unwords [strs !! 5, strs !! 7, strs !! 9]
-  strs = splitOneOf ", " vstrRaw
-  vstrRaw = unsafePerformIO (petscGetVersion 50)
+  vstrRaw = unsafePerformIO (petscGetVersion 200)
 
 petscGetVersion :: Int -> IO String
 petscGetVersion l = do

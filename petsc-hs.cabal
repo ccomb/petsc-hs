@@ -31,8 +31,8 @@ library
   exposed-modules:     Numerical.PETSc, 
                        Numerical.PETSc.Spec
                        Numerical.PETSc.Test
-  other-modules:       Numerical.PETSc.Internal
-                       Numerical.PETSc.Internal.Exception
+                       Numerical.PETSc.Internal
+  other-modules:       Numerical.PETSc.Internal.Exception
                        Numerical.PETSc.Internal.InlineC                         
                        Numerical.PETSc.Internal.InlineCInternal
                        Numerical.PETSc.Internal.PutGet
@@ -98,6 +98,8 @@ library
   hs-source-dirs:      src/
   default-language:    Haskell2010
   ghc-options:         -j2 -O2 -Wall
+  -- Use cabal.project.local or build script for PETSc/SLEPc paths
+  -- This avoids hardcoded absolute paths in version control
   extra-libraries:     petsc, mpi, slepc
 
 

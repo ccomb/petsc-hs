@@ -75,16 +75,8 @@ slepcHeader =
 -- | SLEPc version string
 {-# NOINLINE slepcVersionString #-}
 slepcVersionString :: String
-slepcVersionString =
-  case length strs of
-    n
-      | n > 8 -> ver ++ ", rel. " ++ date
-      | n > 3 -> strs !! 3 ++ " (version parsing simplified)"
-      | otherwise -> vstrRaw ++ " (raw version string)"
+slepcVersionString = vstrRaw
  where
-  ver = strs !! 3
-  date = unwords [strs !! 5, strs !! 6, strs !! 8]
-  strs = splitOneOf ", " vstrRaw
   vstrRaw = unsafePerformIO $ do
     fp <- mallocPlainForeignPtrBytes l -- see Data.Bytestring.Internal.create
     withForeignPtr fp $ \p -> do
@@ -92,4 +84,4 @@ slepcVersionString =
       peekCString p
    where
     pgv v sz = chk0 (slepcGetVersion0' v sz)
-    l = 50
+    l = 200
