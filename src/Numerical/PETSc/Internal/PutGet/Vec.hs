@@ -65,10 +65,7 @@ import qualified Data.Vector.Generic.Mutable       as VGM
 -- | instances
  
 
--- -- Show
-
-instance Show Vec where        
-  show v = show (unsafePerformIO $ vecGetVS v)
+-- -- Show instance moved to Types.hs to avoid orphan instance
 
 
 
@@ -699,7 +696,7 @@ vecViewStdout = vecView
 
 vecGetOwnershipRange :: Vec -> IO (Int, Int)
 vecGetOwnershipRange v = 
-  chk1 (vecGetOwnershipRange1 v) >>= bothMf fi
+  chk1 (vecGetOwnershipRange1 v) >>= bothMf fromIntegral
 
 vecGetSize :: Vec -> IO Int
 vecGetSize v = fi <$> chk1 ( vecGetSize' v) 

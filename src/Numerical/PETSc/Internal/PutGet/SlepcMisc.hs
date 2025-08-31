@@ -69,7 +69,11 @@ slepcHeader =
 
 {-# NOINLINE slepcVersionString #-}
 slepcVersionString :: String
-slepcVersionString = ver ++ ", rel. " ++ date
+slepcVersionString = 
+  case length strs of
+    n | n > 8 -> ver ++ ", rel. " ++ date
+      | n > 3 -> strs!!3 ++ " (version parsing simplified)"
+      | otherwise -> vstrRaw ++ " (raw version string)"
   where
     ver = strs!!3
     date = unwords [strs!!5, strs!!6, strs!!8]

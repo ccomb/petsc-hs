@@ -503,6 +503,9 @@ fs = fromIntegral
 toCInt :: Int -> CInt
 toCInt = CInt . fromIntegral
 
+toCLong :: Int -> CLong
+toCLong = CLong . fromIntegral
+
 fromCDouble :: CDouble -> Double
 fromCDouble (CDouble x) = x
 

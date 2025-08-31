@@ -100,6 +100,7 @@ newtype PetscSF = PetscSF (Ptr PetscSF) deriving Storable
 newtype PetscSFNode = PetscSFNode (Ptr PetscSFNode) deriving Storable
 
 newtype Vec = Vec (Ptr Vec) deriving Storable
+instance Show Vec where show _ = "<Vec>"
 
 -- instance StorableContainer Vec IO PetscScalar_ where
   

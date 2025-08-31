@@ -73,7 +73,7 @@ t_linSys_r3_1 = describe "t_linSys_r3_1" $
    withPetscMatrix com m n MatAij ixd nz InsertValues $ \mat ->
     withVecNew com vrhs $ \rhs -> do
      let (_, _, _, mu) = fromPetscMatrix mat
-     withKspSetupSolveAlloc com KspGmres mu mu rhs $ \ksp soln -> do
+     withKspSetupSolveAlloc com KspGmres mu mu rhs $ \_ soln -> do
        withVecNew com vsolnTrue $ \solnTrue -> 
         withVecVecSubtract soln solnTrue $ \solnDiff -> do
           nd <- vecNorm solnDiff VecNorm2
@@ -96,7 +96,7 @@ t_eigen_r3_1 = describe "t_eigen_r3_1" $
   it "solves a 3x3 (real, asymmetric) linear eigenproblem: eigenvalues are real numbers" $
    withPetscMatrix com m n  MatAij ixd nz InsertValues $ \mat -> do
     let (_, _, _, mu) = fromPetscMatrix mat
-    withEpsCreateSetupSolve com mu Nothing EpsHep $ \eps nev vrr _ -> do
+    withEpsCreateSetupSolve com mu Nothing EpsHep $ \eps _ _ _ -> do
       -- putStrLn "Eigenvectors : (real, imag)"
       -- _ <- withEpsEigenvectors eps $ \(VecRight vr) (VecRight vi) -> do
       --        print (vr, vi)
@@ -129,7 +129,7 @@ t_eigen_r3_1_spd = describe "t_eigen_r3_1_symm" $
   it "solves a 3x3 (symmetric positive definite) linear eigenproblem: eigenvalues are real positive numbers" $
    withPetscMatrix com m n  MatAij ixd nz InsertValues $ \mat -> do
     let (_, _, _, mu) = fromPetscMatrix mat
-    withEpsCreateSetupSolve com mu Nothing EpsHep $ \eps nev vrr _ -> do
+    withEpsCreateSetupSolve com mu Nothing EpsHep $ \eps _ _ _ -> do
       -- putStrLn "Eigenvalues : (real :+ imag)"
       ve <- epsGetEigenvalues eps
       -- let evc = V.map (\(a,b) -> a :+ b) ve

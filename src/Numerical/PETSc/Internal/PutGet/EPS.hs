@@ -212,7 +212,7 @@ epsGetEigenvalue ::
   EPS ->
   Int ->                          -- # eigenpair
   IO (PetscScalar_, PetscScalar_) -- (real, imag) 
-epsGetEigenvalue eps ii = chk1 $ epsGetEigenvalue' eps (toCInt ii)
+epsGetEigenvalue eps ii = chk1 $ epsGetEigenvalue' eps (fromIntegral (toCInt ii))
 
 withEpsGetEigenvector ::
   EPS ->
@@ -223,7 +223,7 @@ withEpsGetEigenvector ::
   IO a
 withEpsGetEigenvector eps ii fme = withEpsVecRight eps $ \(VecRight vvr) -> 
   withVecClone vvr $ \vvi -> do
-   chk0 $ epsGetEigenvector' eps (toCInt ii) vvr vvi
+   chk0 $ epsGetEigenvector' eps (fromIntegral (toCInt ii)) vvr vvi
    fme (VecRight vvr) (VecRight vvi)
 
 

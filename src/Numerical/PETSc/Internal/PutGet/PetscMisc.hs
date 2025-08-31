@@ -270,7 +270,11 @@ petscHeader =
 
 {-# NOINLINE petscVersionString #-}
 petscVersionString :: String
-petscVersionString = ver ++ ", rel. " ++ date
+petscVersionString = 
+  case length strs of
+    n | n > 9 -> ver ++ ", rel. " ++ date
+      | n > 3 -> strs!!3 ++ " (version parsing simplified)"
+      | otherwise -> vstrRaw ++ " (raw version string)"
   where
     ver = strs!!3
     date = unwords [strs!!5, strs!!7, strs!!9]
@@ -286,13 +290,6 @@ petscGetVersion l = do
     where
      pgv v sz = chk0 (petscGetVersion0' v sz)
 
-
-getCString :: Int -> (Ptr CChar -> IO a) -> IO String
-getCString l act = do
-  fp <- mallocPlainForeignPtrBytes l
-  withForeignPtr fp $ \p -> do
-    act p
-    peekCString p
 
 
 

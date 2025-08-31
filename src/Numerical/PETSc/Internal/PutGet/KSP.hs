@@ -154,7 +154,7 @@ kspSetReusePreconditioner ksp b = chk0 (kspSetReusePreconditioner' ksp b)
 kspGetTolerances :: KSP -> IO (Double, Double, Double, Int)
 kspGetTolerances ksp = do
   (rtol, abstol, dtol, maxits) <- chk1 ( kspGetTolerances0' ksp )
-  return (fromCDouble rtol, fromCDouble abstol, fromCDouble dtol, fi maxits)
+  return (fromCDouble rtol, fromCDouble abstol, fromCDouble dtol, fromIntegral maxits)
 
 kspSetTolerances :: KSP -> Double -> Double -> Double -> Int -> IO ()
 kspSetTolerances ksp rtol abstol dtol maxits =

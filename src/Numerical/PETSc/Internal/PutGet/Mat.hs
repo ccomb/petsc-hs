@@ -158,6 +158,7 @@ matCreateAdapter cc m n mty nz = do
      case nz of
       (ConstNZPR (dnz, onz)) -> matMPIAIJSetPreallocationConstNZPR mat dnz onz
       (VarNZPR (dnnz, onnz)) -> matMPIAIJSetPreallocationVarNZPR mat dnnz onnz
+    _ -> return () -- Other matrix types not yet supported
   matSetup mat
   return mat
 
@@ -241,11 +242,11 @@ matCreateMPIAIJWithVectors c (m, n) (mm, nn) ix iy ia =
   VS.unsafeWith iac $ \aap ->
    chk1 (matCreateMPIAIJWithArrays0' c m' n' mm' nn' ip jp aap)
      where
-           ixc = V.convert $ V.map toCInt ix :: VS.Vector CInt
-           iyc = V.convert $ V.map toCInt iy :: VS.Vector CInt
+           ixc = V.convert $ V.map (fromIntegral . toCInt) ix :: VS.Vector PetscInt_
+           iyc = V.convert $ V.map (fromIntegral . toCInt) iy :: VS.Vector PetscInt_
            iac = V.convert ia :: VS.Vector PetscScalar_
-           (m', n') = (toCInt m, toCInt n)
-           (mm', nn') = (toCInt mm, toCInt nn)
+           (m', n') = (fromIntegral (toCInt m), fromIntegral (toCInt n))
+           (mm', nn') = (fromIntegral (toCInt mm), fromIntegral (toCInt nn))
 
 
 matTranspose :: Mat -> MatReuse_ -> IO Mat
@@ -631,7 +632,7 @@ matCreateVecRight m = liftM VecRight $ chk1 ( matCreateVecRight' m )
 -- | get Mat properties
 
 matGetOwnershipRange :: Mat -> IO (Int, Int)
-matGetOwnershipRange m = chk1 (matGetOwnershipRange' m) >>= bothMf fi
+matGetOwnershipRange m = chk1 (matGetOwnershipRange' m) >>= bothMf fromIntegral
 
 matGetSizeCInt :: Mat -> IO (CInt, CInt)
 matGetSizeCInt m = chk1 (matGetSize' m)
@@ -695,7 +696,7 @@ matIsStructurallySymmetric mat = chk1 (matIsStructurallySymmetric' mat)
 
 
 -- | # of diagonals that carry at most f% of the Frobenius norm of mat
-matComputeBandwidth :: Mat -> PetscReal_ -> IO CInt
+matComputeBandwidth :: Mat -> PetscReal_ -> IO PetscInt_
 matComputeBandwidth mat f = chk1 (matComputeBandwidth' mat f)
 
 -- | matrix norm

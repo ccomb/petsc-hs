@@ -57,8 +57,8 @@ withIsCreateGeneral :: IsInfo -> PetscCopyMode_ -> (IS -> IO a) -> IO a
 withIsCreateGeneral iis mode =
   bracket (isCreateGeneral cc n idx mode) isDestroy where
     cc = isInfoMpiComm iis
-    n = toCInt $ length idxi
-    idx = map toCInt idxi
+    n = fromIntegral (toCInt $ length idxi)
+    idx = map (fromIntegral . toCInt) idxi
     idxi = isIndexSet iis
 
 isColoringCreate ::

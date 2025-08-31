@@ -2,11 +2,12 @@ flags: {}
 packages:
 - '.'
 extra-deps: 
+- prelude-extras-0.4.0.3@sha256:1c10b0123ea13a6423d74a8fcbaeb2d5249b472588abde418a36b47b7c4f48c8,1163
 # - inline-c-0.5.5.3
 
 # resolver: lts-1.0            # ghc-7.8.4
 # resolver: lts-5.15           # ghc-7.10.3
-resolver: nightly-2016-06-20 # ghc 8.0.1
+resolver: lts-20.26 # ghc-9.2.8
 
 ghc-options:
   "*": -fno-warn-missing-signatures -fno-warn-unused-do-bind -fno-warn-unused-imports

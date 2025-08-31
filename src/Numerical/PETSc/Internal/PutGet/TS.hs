@@ -56,7 +56,9 @@ tsSetInitialTimeStep ::
   PetscReal_ -> -- initial time
   PetscReal_ -> -- initial timestep
   IO ()
-tsSetInitialTimeStep ts it dt = chk0 $ tsSetInitialTimeStep' ts it dt
+tsSetInitialTimeStep ts it dt = do
+  chk0 $ tsSetTime' ts it
+  chk0 $ tsSetTimeStep' ts dt
 
 
 tsSetExactFinalTime :: TS -> TsExactFinalTimeOption_ -> IO ()
@@ -69,7 +71,9 @@ tsSetDuration ::
   Int ->  -- max. # steps
   PetscReal_ -> -- max. time
   IO ()
-tsSetDuration ts ms mt = chk0 $ tsSetDuration' ts ms mt
+tsSetDuration ts ms mt = do
+  chk0 $ tsSetMaxSteps' ts ms
+  chk0 $ tsSetMaxTime' ts mt
 
 tsSetSolution ::
   TS ->
@@ -233,7 +237,7 @@ tsSetCostGradients ts numcost lambda_ mu_ =
   withArray lambda_ $ \lp ->
   withArray mu_ $ \mp ->
    chk0 $ tsSetCostGradients' ts n lp mp where
-     n = toCInt numcost
+     n = fromIntegral (toCInt numcost)
 
 tsAdjointSetRHSJacobian ::
   TS ->
@@ -247,23 +251,24 @@ tsAdjointSetRHSJacobian ts amat f  =
 
 
 
+-- TSSetCostIntegrand was deprecated - use TSCreateQuadratureTS instead
 -- | if nonzero integrand in Bolza cost functional `r(t, y, p)`:
 
-tsSetCostIntegrand_ ts ncostf rf drdyf drdpf fwdf =
-  chk0 (tsSetCostIntegrand0' ts ncostf rf drdyf drdpf fwdf)
-  
-tsSetCostIntegrand ::
-  TS ->
-  PetscInt_ ->
-  (TS -> PetscReal_ -> Vec -> Vec -> IO CInt) ->      -- value of integrand `r`
-  (TS -> PetscReal_ -> Vec -> Ptr Vec -> IO CInt) ->  -- dr/dy
-  (TS -> PetscReal_ -> Vec -> Ptr Vec -> IO CInt) ->  -- dr/dp
-  PetscBool -> 
-  IO ()
-tsSetCostIntegrand ts n rf drdyf drdpf fwdf = tsSetCostIntegrand_ ts n fa fb fc fwdf where
-  fa a b c d _ = rf a b c d
-  fb a b c d _ = drdyf a b c d
-  fc a b c d _ = drdpf a b c d
+-- tsSetCostIntegrand_ ts ncostf rf drdyf drdpf fwdf =
+--   chk0 (tsSetCostIntegrand0' ts ncostf rf drdyf drdpf fwdf)
+--   
+-- tsSetCostIntegrand ::
+--   TS ->
+--   PetscInt_ ->
+--   (TS -> PetscReal_ -> Vec -> Vec -> IO CInt) ->      -- value of integrand `r`
+--   (TS -> PetscReal_ -> Vec -> Ptr Vec -> IO CInt) ->  -- dr/dy
+--   (TS -> PetscReal_ -> Vec -> Ptr Vec -> IO CInt) ->  -- dr/dp
+--   PetscBool -> 
+--   IO ()
+-- tsSetCostIntegrand ts n rf drdyf drdpf fwdf = tsSetCostIntegrand_ ts n fa fb fc fwdf where
+--   fa a b c d _ = rf a b c d
+--   fb a b c d _ = drdyf a b c d
+--   fc a b c d _ = drdpf a b c d
 
 
 
