@@ -92,6 +92,44 @@ withKspSetupSolveAlloc cc kt amat pmat ignz rhsv post =
     withKspSetupSolve cc kt amat pmat ignz rhsv soln $ \ksp ->
       post ksp soln
 
+-- | KSP setup that uses PETSC_OPTIONS for configuration (no hardcoded type)
+withKspSetupFromOptions ::
+  Comm ->
+  Mat -> -- linear operator
+  Mat -> -- preconditioner
+  Bool -> -- set initial solution guess to nonzero vector
+  (KSP -> IO a) -> -- post-setup actions
+  IO a
+withKspSetupFromOptions cc amat pmat ignz f = withKsp cc $ \ksp -> do
+  kspSetOperators ksp amat pmat
+  kspSetFromOptions ksp  -- Read PETSC_OPTIONS instead of hardcoding type
+  kspSetInitialGuessNonzero ksp ignz
+  kspSetUp ksp
+  f ksp
+
+-- | KSP setup and solve that uses PETSC_OPTIONS
+withKspSetupSolveFromOptions ::
+  Comm ->
+  Mat -> -- linear operator
+  Mat -> -- preconditioner
+  Bool -> -- set initial solution guess to nonzero vector
+  Vec -> -- r.h.s
+  Vec -> -- solution (WILL BE OVERWRITTEN)
+  (KSP -> IO a) -> -- post-solve actions
+  IO a
+withKspSetupSolveFromOptions cc amat pmat ignz rhsv solnv post =
+  withKspSetupFromOptions cc amat pmat ignz $ \ksp -> do
+    kspSolve ksp rhsv solnv
+    post ksp
+
+-- | allocate space for solution internally, using PETSC_OPTIONS
+withKspSetupSolveAllocFromOptions ::
+  Comm -> Mat -> Mat -> Bool -> Vec -> (KSP -> Vec -> IO a) -> IO a
+withKspSetupSolveAllocFromOptions cc amat pmat ignz rhsv post =
+  withVecDuplicate rhsv $ \soln ->
+    withKspSetupSolveFromOptions cc amat pmat ignz rhsv soln $ \ksp ->
+      post ksp soln
+
 -- withKsp cs $ \ksp -> do
 --   kspSetOperators ksp mat mat
 --   kspSetType ksp km
@@ -111,6 +149,9 @@ kspDestroy ksp = chk0 (kspDestroy' ksp)
 -- | set KSP properties
 kspSetType :: KSP -> KspType_ -> IO ()
 kspSetType ksp kt = chk0 (kspSetType' ksp kt)
+
+kspSetFromOptions :: KSP -> IO ()
+kspSetFromOptions ksp = chk0 (kspSetFromOptions' ksp)
 
 kspSetOperators :: KSP -> Mat -> Mat -> IO ()
 kspSetOperators ksp amat pmat = chk0 (kspSetOperators' ksp amat pmat)

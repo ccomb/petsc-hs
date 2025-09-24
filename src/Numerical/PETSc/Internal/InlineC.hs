@@ -2197,12 +2197,18 @@ kspSetType' :: KSP -> KspType_ -> IO CInt
 kspSetType' ksp kt = withCString strk $ \strp -> [C.exp|int{KSPSetType($(KSP ksp), $(char* strp))}|] where
   strk = kspTypeToStr kt
 
+kspSetFromOptions' :: KSP -> IO CInt
+kspSetFromOptions' ksp = [C.exp|int{KSPSetFromOptions($(KSP ksp))}|]
+
+pcSetFromOptions' :: PC -> IO CInt
+pcSetFromOptions' pc = [C.exp|int{PCSetFromOptions($(PC pc))}|]
+
 
 
 -- PETSC_EXTERN PetscErrorCode KSPGetType(KSP,KSPType *);
 -- kspGetType ksp = alloca ( \strp -> do
 --                            [C.exp|int{KSPGetType($(KSP ksp), $(char *strp))}|]
---                            peekString strp) 
+--                            peekString strp)
 
 kspDestroy' :: KSP -> IO CInt
 kspDestroy' k = with k $ \pp -> [C.exp| int{KSPDestroy($(KSP *pp))}  |]
