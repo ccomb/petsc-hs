@@ -86,10 +86,10 @@ withKspSetupSolve cc kt amat pmat ignz rhsv solnv post =
 
 -- | allocate space for solution internally
 withKspSetupSolveAlloc ::
-  Comm -> KspType_ -> Mat -> Mat -> Vec -> (KSP -> Vec -> IO a) -> IO a
-withKspSetupSolveAlloc cc kt amat pmat rhsv post =
+  Comm -> KspType_ -> Mat -> Mat -> Bool -> Vec -> (KSP -> Vec -> IO a) -> IO a
+withKspSetupSolveAlloc cc kt amat pmat ignz rhsv post =
   withVecDuplicate rhsv $ \soln ->
-    withKspSetupSolve cc kt amat pmat True rhsv soln $ \ksp ->
+    withKspSetupSolve cc kt amat pmat ignz rhsv soln $ \ksp ->
       post ksp soln
 
 -- withKsp cs $ \ksp -> do

@@ -70,7 +70,7 @@ t_linSys_r3_1 = describe "t_linSys_r3_1" $
     withPetscMatrix com m n MatAij ixd nz InsertValues $ \mat ->
       withVecNew com vrhs $ \rhs -> do
         let (_, _, _, mu) = fromPetscMatrix mat
-        withKspSetupSolveAlloc com KspGmres mu mu rhs $ \_ soln -> do
+        withKspSetupSolveAlloc com KspGmres mu mu True rhs $ \_ soln -> do
           withVecNew com vsolnTrue $ \solnTrue ->
             withVecVecSubtract soln solnTrue $ \solnDiff -> do
               nd <- vecNorm solnDiff VecNorm2
