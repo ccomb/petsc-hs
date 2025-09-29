@@ -103,6 +103,8 @@ withKspSetupFromOptions ::
 withKspSetupFromOptions cc amat pmat ignz f = withKsp cc $ \ksp -> do
   kspSetOperators ksp amat pmat
   kspSetFromOptions ksp  -- Read PETSC_OPTIONS instead of hardcoding type
+  pc <- kspGetPC ksp
+  pcSetFromOptions pc    -- Configure preconditioner from PETSC_OPTIONS (enables MUMPS options)
   kspSetInitialGuessNonzero ksp ignz
   kspSetUp ksp
   f ksp
@@ -152,6 +154,12 @@ kspSetType ksp kt = chk0 (kspSetType' ksp kt)
 
 kspSetFromOptions :: KSP -> IO ()
 kspSetFromOptions ksp = chk0 (kspSetFromOptions' ksp)
+
+kspGetPC :: KSP -> IO PC
+kspGetPC ksp = chk1 (kspGetPC' ksp)
+
+pcSetFromOptions :: PC -> IO ()
+pcSetFromOptions pc = chk0 (pcSetFromOptions' pc)
 
 kspSetOperators :: KSP -> Mat -> Mat -> IO ()
 kspSetOperators ksp amat pmat = chk0 (kspSetOperators' ksp amat pmat)

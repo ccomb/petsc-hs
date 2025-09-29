@@ -42,13 +42,10 @@ showDropN :: (Show a) => Int -> a -> String
 showDropN n = drop n . map toLower . show
 
 petscBoolCToBool :: PetscBool -> Bool
-petscBoolCToBool pb = case petscBoolFromC pb of
-  PetscTrue -> True
-  PetscFalse -> False
+petscBoolCToBool = petscBoolFromC
 
 boolToPetscBoolC :: Bool -> PetscBool
-boolToPetscBoolC True = petscBoolToC PetscTrue
-boolToPetscBoolC False = petscBoolToC PetscFalse
+boolToPetscBoolC = petscBoolToC
 
 -- | elementary type synonyms
 type MatConst = CInt
