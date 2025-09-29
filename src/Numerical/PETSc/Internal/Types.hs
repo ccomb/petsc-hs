@@ -48,8 +48,6 @@ petscBoolCToBool = petscBoolFromC
 boolToPetscBoolC :: Bool -> PetscBool
 boolToPetscBoolC = petscBoolToC
 
-
-
 -- | elementary type synonyms
 
 type MatConst = CInt
