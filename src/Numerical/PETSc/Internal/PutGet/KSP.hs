@@ -156,7 +156,7 @@ kspSetFromOptions :: KSP -> IO ()
 kspSetFromOptions ksp = chk0 (kspSetFromOptions' ksp)
 
 kspGetPC :: KSP -> IO PC
-kspGetPC ksp = chk1 (kspGetPC' ksp)
+kspGetPC ksp = chk1 (kspGetPc' ksp)
 
 pcSetFromOptions :: PC -> IO ()
 pcSetFromOptions pc = chk0 (pcSetFromOptions' pc)

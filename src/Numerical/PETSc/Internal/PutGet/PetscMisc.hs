@@ -66,6 +66,7 @@ import Foreign.C.Types
 import Foreign.ForeignPtr
 
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO (stderr, hPutStrLn)
 
 import Control.Applicative ((<$>))
 import Control.Monad
@@ -191,11 +192,11 @@ petscOptionsSetValue opt val = chk0 $ petscOptionsSetValue0' (helper opt) val
 
 petscInit0 :: IO ()
 petscInit0 =
-  chk0 petscInit0' >> putStrLn (petscHeader ++ " with default options\n")
+  chk0 petscInit0' >> hPutStrLn stderr (petscHeader ++ " with default options\n")
 
 petscFin :: IO ()
 petscFin =
-  chk0 petscFin' >> putStrLn ("\nPETSc : finalized\n" ++ sep)
+  chk0 petscFin' >> hPutStrLn stderr ("\nPETSc : finalized\n" ++ sep)
 
 withPetsc0 :: IO a -> IO a
 withPetsc0 = bracket_ petscInit0 petscFin
@@ -214,7 +215,7 @@ petscInit ::
   IO ()
 petscInit args opts help = do
   chk0 (petscInitialize1 args opts help)
-  putStrLn petscHeader
+  hPutStrLn stderr petscHeader
 
 withPetsc ::
   [String] -> String -> String -> IO a -> IO a
