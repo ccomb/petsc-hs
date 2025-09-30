@@ -33,6 +33,7 @@ import Foreign.C.String
 import GHC.ForeignPtr (mallocPlainForeignPtrBytes)
 
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO (stderr, hPutStrLn)
 
 
 
@@ -41,11 +42,11 @@ slepcInit a o h = chk0 $ slepcInitialize' a o h
 
 slepcInit0 :: IO ()
 slepcInit0 =
-  chk0 slepcInit0' >> putStrLn (slepcHeader ++ " with default options\n")
+  chk0 slepcInit0' >> hPutStrLn stderr (slepcHeader ++ " with default options\n")
 
 slepcFin :: IO ()
 slepcFin =
-  chk0 slepcFin' >> putStrLn ("\nSLEPc : finalized\n" ++ sep)
+  chk0 slepcFin' >> hPutStrLn stderr ("\nSLEPc : finalized\n" ++ sep)
 
 
 -- | FIXME: move into specialized monad
