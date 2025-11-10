@@ -152,7 +152,7 @@ isColoringCreate' :: Comm
 isColoringCreate' cc ncolors n cols copymode =
    withPtr $ \iscoloring ->
     withArray cols $ \colv -> 
-  [C.exp|int{ISColoringCreate($(int c),$(int ncolors),$(int n),$(const int* colv),$(int mo),$(ISColoring* iscoloring))}|]
+  [C.exp|int{ISColoringCreate($(int c),$(int ncolors),$(int n),(const ISColoringValue*)$(const int* colv),$(int mo),$(ISColoring* iscoloring))}|]
      where
        c = unComm cc
        mo = toCInt $ petscCopyModeToInt copymode
@@ -193,7 +193,7 @@ petscSFDestroy' sf = with sf $ \sfp -> [C.exp|int{PetscSFDestroy($(PetscSF* sfp)
 -- iremote	- remote locations of root vertices for each leaf on the current process
 -- remotemode	- copy mode for iremote
 petscSFSetGraph' sf nroots nleaves ilocal localmode iremote remotemode =
-  [C.exp|int{PetscSFSetGraph($(PetscSF sf), $(PetscInt nroots), $(PetscInt nleaves), $(const PetscInt* ilocal), $(int localmodep), $(const PetscSFNode* iremote), $(int remotemodep))}|] where
+  [C.exp|int{PetscSFSetGraph($(PetscSF sf), $(PetscInt nroots), $(PetscInt nleaves), $(PetscInt* ilocal), $(int localmodep), $(PetscSFNode* iremote), $(int remotemodep))}|] where
   localmodep = toCInt $ petscCopyModeToInt localmode
   remotemodep = toCInt $ petscCopyModeToInt remotemode
 
@@ -216,7 +216,7 @@ vecView' ve viewer =
 -- PetscErrorCode  PetscObjectSetName(PetscObject obj,const char name[])
 vecSetName1 :: Vec -> String -> IO CInt
 vecSetName1 v name = withCString name $ \n ->
-  [C.exp|int{PetscObjectSetName($(Vec v),$(const char* n))}|]
+  [C.exp|int{PetscObjectSetName((PetscObject)$(Vec v),$(const char* n))}|]
 
 
 -- PetscErrorCode  VecLoad(Vec newvec, PetscViewer viewer)
@@ -495,7 +495,7 @@ vecRestoreArray1d' x m mstart arr =
 
 -- TODO row (block) indexing : these should not be interpreted as mere Ints but as indices, e.g. FEM mesh nodes -- see repa 
 
-vecGetOwnershipRange1 :: Vec -> IO ((CInt, CInt), CInt)
+vecGetOwnershipRange1 :: Vec -> IO ((PetscInt_, PetscInt_), CInt)
 vecGetOwnershipRange1 a = withPtr2 $ \rmin rmax -> 
        [C.exp|int{VecGetOwnershipRange($(Vec a), $(PetscInt *rmin), $(PetscInt * rmax) )}|] 
     
@@ -696,7 +696,7 @@ matCreateSeqAIJconstNZperRow1 cc m' n' nz' =
                                        NULL ,
                                        $(Mat *mat))}|]) 
   where c = unComm cc
-        (m, n, nz) = (toCInt m', toCInt n', toCInt nz')
+        (m, n, nz) = (toCLong m', toCLong n', toCLong nz')
 
 
 matTranspose' :: Mat -> MatReuse_ -> IO (Mat, CInt)
@@ -789,8 +789,8 @@ matCreateAIJ0DecideVarNZPR' cc mm nn dnnz onnz = withPtr ( \mat ->
          [C.exp|int{MatCreateAIJ($(int c),
                           PETSC_DECIDE, PETSC_DECIDE,
                           $(PetscInt mm), $(PetscInt nn),
-                          NULL, $(const PetscInt* dnnzp),
-                          NULL, $(const PetscInt* onnzp),
+                          0, $(const PetscInt* dnnzp),
+                          0, $(const PetscInt* onnzp),
                           $(Mat* mat))}|] ) where c = unComm cc
                                                   
 --     PetscErrorCode  MatCreateMPIAIJWithArrays(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,const PetscInt i[],const PetscInt j[],const PetscScalar a[],Mat *mat)    -- Collective on MPI_Comm
@@ -823,7 +823,7 @@ matCreateMPIAIJWithArrays0' cc m n mm nn ip jp aap =
                                     $(const PetscInt* ip), $(const PetscInt* jp),
                                     $(const PetscScalar* aap), 
                                     $(Mat* mat))}|] )
-    where c = unComm cc 
+    where c = toCLong $ fromIntegral $ unComm cc 
 
 
 matView' :: Mat -> PetscViewer -> IO CInt
@@ -938,7 +938,7 @@ matSeqAIJSetPreallocationConstNZPR' mat nz =
 matSeqAIJSetPreallocationVarNZPR' :: Mat -> VS.Vector CInt -> IO CInt
 matSeqAIJSetPreallocationVarNZPR' mat nnz =
                      [C.exp|int{MatSeqAIJSetPreallocation( $(Mat mat),
-                                                           NULL,
+                                                           0,
                                                            $vec-ptr:(int *nnz))} |]
 
 -- PetscErrorCode  MatMPIAIJSetPreallocation(Mat B,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])  -- Collective on MPI_Comm
@@ -965,9 +965,9 @@ matMPIAIJSetPreallocationConstNZPR' b dnz onz = [C.exp|int{MatMPIAIJSetPrealloca
 matMPIAIJSetPreallocationVarNZPR' ::
   Mat -> VS.Vector CInt -> VS.Vector CInt -> IO CInt
 matMPIAIJSetPreallocationVarNZPR' b dnnz onnz = [C.exp|int{MatMPIAIJSetPreallocation($(Mat b),
-                                       NULL,
+                                       0,
                                        $vec-ptr:(const int* dnnz),
-                                       NULL,
+                                       0,
                                        $vec-ptr:(const int* onnz))}|]
 
 
@@ -1396,13 +1396,66 @@ matTransposeMatMult' matA matB scall fill =
 -- Unless scall is MAT_REUSE_MATRIX C will be created.
 -- To determine the correct fill value, run with -info and search for the string "Fill ratio" to see the value actually needed.
 -- This routine is currently implemented for - pairs of AIJ matrices and classes which inherit from AIJ, C will be of type AIJ - pairs of AIJ (A) and Dense (B) matrix, C will be of type Dense. - pairs of Dense (A) and AIJ (B) matrix, C will be of type Dense.
-matMatMultSymbolic' matA matB fill =
-  withPtr $ \matC ->
-     [C.exp|int{MatMatMultSymbolic($(Mat matA),$(Mat matB),$(PetscReal fill),$(Mat* matC))}|]
+-- MatMatMultSymbolic was deprecated - use MatProduct API instead
+-- matMatMultSymbolic' matA matB fill =
+--   withPtr $ \matC ->
+--      [C.exp|int{MatMatMultSymbolic($(Mat matA),$(Mat matB),$(PetscReal fill),$(Mat* matC))}|]
 
--- PetscErrorCode  MatMatMultNumeric(Mat A,Mat B,Mat C)
-matMatMultNumeric' matA matB matC =
-  [C.exp|int{MatMatMultNumeric($(Mat matA),$(Mat matB),$(Mat matC))}|]
+-- MatMatMultNumeric was deprecated in PETSc 3.13.0 
+-- TODO: Replace with MatProductCreate/MatProductSymbolic/MatProductNumeric workflow
+-- matMatMultNumeric' matA matB matC =
+--   [C.exp|int{MatMatMultNumeric($(Mat matA),$(Mat matB),$(Mat matC))}|]
+
+-- Modern MatProduct API (PETSc 3.13.0+)
+
+-- PetscErrorCode MatProductCreate(Mat A, Mat B, Mat C, Mat *D)
+matProductCreate' :: Mat -> Mat -> Mat -> IO (Mat, CInt)
+matProductCreate' matA matB matC = withPtr (\matD -> [C.exp|int{MatProductCreate($(Mat matA),$(Mat matB),$(Mat matC),$(Mat* matD))}|])
+
+-- PetscErrorCode MatProductCreateWithMat(Mat A, Mat B, Mat C, Mat D)  
+matProductCreateWithMat' :: Mat -> Mat -> Mat -> Mat -> IO CInt
+matProductCreateWithMat' matA matB matC matD = 
+  [C.exp|int{MatProductCreateWithMat($(Mat matA),$(Mat matB),$(Mat matC),$(Mat matD))}|]
+
+-- PetscErrorCode MatProductSetType(Mat mat, MatProductType ptype)
+matProductSetType' :: Mat -> CString -> IO CInt
+matProductSetType' mat ptype =
+  [C.exp|int{MatProductSetType($(Mat mat),(MatProductType)$(char* ptype))}|]
+
+-- PetscErrorCode MatProductSetAlgorithm(Mat mat, const char alg[])
+matProductSetAlgorithm' :: Mat -> CString -> IO CInt  
+matProductSetAlgorithm' mat alg =
+  [C.exp|int{MatProductSetAlgorithm($(Mat mat),$(char* alg))}|]
+
+-- PetscErrorCode MatProductSetFill(Mat mat, PetscReal fill)
+matProductSetFill' :: Mat -> PetscReal_ -> IO CInt
+matProductSetFill' mat fill =
+  [C.exp|int{MatProductSetFill($(Mat mat),$(PetscReal fill))}|]
+
+-- PetscErrorCode MatProductSetFromOptions(Mat mat)
+matProductSetFromOptions' :: Mat -> IO CInt
+matProductSetFromOptions' mat =
+  [C.exp|int{MatProductSetFromOptions($(Mat mat))}|]
+
+-- PetscErrorCode MatProductSymbolic(Mat mat)
+matProductSymbolic' :: Mat -> IO CInt
+matProductSymbolic' mat =
+  [C.exp|int{MatProductSymbolic($(Mat mat))}|]
+
+-- PetscErrorCode MatProductNumeric(Mat mat)  
+matProductNumeric' :: Mat -> IO CInt
+matProductNumeric' mat =
+  [C.exp|int{MatProductNumeric($(Mat mat))}|]
+
+-- PetscErrorCode MatProductReplaceMats(Mat A, Mat B, Mat C, Mat mat)
+matProductReplaceMats' :: Mat -> Mat -> Mat -> Mat -> IO CInt
+matProductReplaceMats' matA matB matC mat =
+  [C.exp|int{MatProductReplaceMats($(Mat matA),$(Mat matB),$(Mat matC),$(Mat mat))}|]
+
+-- PetscErrorCode MatProductClear(Mat mat)
+matProductClear' :: Mat -> IO CInt  
+matProductClear' mat =
+  [C.exp|int{MatProductClear($(Mat mat))}|]
 
 -- -- -- Mat experiments
 
@@ -1512,7 +1565,7 @@ matNullSpaceCreate' cc hasc n vecs = withPtr $ \sp ->
    [C.exp|int{MatNullSpaceCreate($(int c),$(PetscBool hascc),$(PetscInt nn),$(const Vec* vecsp),$(MatNullSpace* sp))}|]
   where c = unComm cc
         hascc = boolToPetscBoolC hasc
-        nn = toCInt n
+        nn = toCLong n
 
 matNullSpaceDestroy' :: MatNullSpace -> IO CInt
 matNullSpaceDestroy' sp = with sp $ \spp ->
@@ -2020,7 +2073,7 @@ dmLocalToGlobalEnd' dm locv im globv = [C.exp|int{DMLocalToGlobalEnd($(DM dm),$(
 dmdaSnesSetFunctionLocal' ::
   DM ->
   InsertMode_ ->
-  (DMDALocalInfo -> Ptr PetscScalar_ -> Ptr PetscScalar_ -> Ptr () -> IO CInt) ->
+  (Ptr DMDALocalInfo -> Ptr () -> Ptr () -> Ptr () -> IO CInt) ->
   Ptr () ->
   IO CInt
 dmdaSnesSetFunctionLocal' dm imode f ctx =
@@ -2028,7 +2081,7 @@ dmdaSnesSetFunctionLocal' dm imode f ctx =
     int{DMDASNESSetFunctionLocal(
            $(DM dm),
            $(int imo),
-           $fun:(int (*f)(DMDALocalInfo,PetscScalar*,PetscScalar*,void*)),
+           $fun:(int (*f)(DMDALocalInfo*,void*,void*,void*)),
                  $(void* ctx)) }
         |]
      where imo = toCInt $ insertModeToInt imode
@@ -2056,7 +2109,7 @@ Use NULL (NULL_INTEGER in Fortran) in place of any output parameter that is not 
 
 dmdaGetInfo_' da dim mm nn pp m n p dof s bxp byp bzp stp =
   [C.exp|
-   int{DMDAGetInfo($(DM da), $(PetscInt* dim), $(PetscInt* mm), $(PetscInt* nn), $(PetscInt* pp), $(PetscInt* m), $(PetscInt* n), $(PetscInt* p), $(PetscInt* dof), $(PetscInt* s), $(DMBoundaryType* bxp), $(DMBoundaryType* byp), $(DMBoundaryType* bzp), $(int* stp))} |]
+   int{DMDAGetInfo($(DM da), $(PetscInt* dim), $(PetscInt* mm), $(PetscInt* nn), $(PetscInt* pp), $(PetscInt* m), $(PetscInt* n), $(PetscInt* p), $(PetscInt* dof), $(PetscInt* s), $(DMBoundaryType* bxp), $(DMBoundaryType* byp), $(DMBoundaryType* bzp), $(DMDAStencilType* stp))} |]
 
 dmdaGetInfo__' :: DM -> IO ((PetscInt_,
                              (PetscInt_, PetscInt_, PetscInt_),
@@ -2144,12 +2197,18 @@ kspSetType' :: KSP -> KspType_ -> IO CInt
 kspSetType' ksp kt = withCString strk $ \strp -> [C.exp|int{KSPSetType($(KSP ksp), $(char* strp))}|] where
   strk = kspTypeToStr kt
 
+kspSetFromOptions' :: KSP -> IO CInt
+kspSetFromOptions' ksp = [C.exp|int{KSPSetFromOptions($(KSP ksp))}|]
+
+pcSetFromOptions' :: PC -> IO CInt
+pcSetFromOptions' pc = [C.exp|int{PCSetFromOptions($(PC pc))}|]
+
 
 
 -- PETSC_EXTERN PetscErrorCode KSPGetType(KSP,KSPType *);
 -- kspGetType ksp = alloca ( \strp -> do
 --                            [C.exp|int{KSPGetType($(KSP ksp), $(char *strp))}|]
---                            peekString strp) 
+--                            peekString strp)
 
 kspDestroy' :: KSP -> IO CInt
 kspDestroy' k = with k $ \pp -> [C.exp| int{KSPDestroy($(KSP *pp))}  |]
@@ -2218,7 +2277,7 @@ kspSetTolerances' ksp rtol abstol dtol maxits = [C.exp|int{KSPSetTolerances($(KS
   rtolc = CDouble rtol
   abstolc = CDouble abstol
   dtolc = CDouble dtol
-  maxitsc = toCInt maxits
+  maxitsc = toCLong maxits
 
 -- PETSC_EXTERN PetscErrorCode KSPSetInitialGuessNonzero(KSP,PetscBool );
 kspSetInitialGuessNonzero' :: KSP -> Bool -> IO CInt
@@ -2586,9 +2645,9 @@ snesGetConvergedReason' s =  withPtr ( \v ->
   [C.exp|int{SNESGetConvergedReason($(SNES s), $(int* v))}|] ) 
 
 
--- PetscErrorCode  SNESReasonView(SNES snes,PetscViewer viewer)
+-- PetscErrorCode  SNESConvergedReasonView(SNES snes,PetscViewer viewer)
 snesReasonView' :: SNES -> PetscViewer -> IO CInt
-snesReasonView' s vi = [C.exp|int{SNESReasonView($(SNES s),$(PetscViewer vi))}|]
+snesReasonView' s vi = [C.exp|int{SNESConvergedReasonView($(SNES s),$(PetscViewer vi))}|]
 
 
 
@@ -2655,7 +2714,7 @@ snesSetJacobian0mono' ::
   -> IO CInt
 snesSetJacobian0mono' snes amat pmat f col =
   [C.exp|int{SNESSetJacobian($(SNES snes),$(Mat amat),$(Mat pmat),
-                             $fun:(int (*f)(SNES,Vec,Mat,Mat,MatFDColoring*)),
+                             (PetscErrorCode (*)(SNES,Vec,Mat,Mat,void*))$fun:(int (*f)(SNES,Vec,Mat,Mat,MatFDColoring*)),
                              $(MatFDColoring col))}|]
 
 
@@ -2932,17 +2991,31 @@ tsSetProblemType' ts t =
    where tt = fromIntegral $ tsProblemTypeToInt t
 
 
--- PetscErrorCode TSSetInitialTimeStep(TS ts,PetscReal initial_time,PetscReal time_step)
-tsSetInitialTimeStep' :: TS -> PetscReal_ -> PetscReal_ -> IO CInt
-tsSetInitialTimeStep' ts it dt =
-  [C.exp|int{TSSetInitialTimeStep($(TS ts), $(PetscReal it), $(PetscReal dt))}|] 
+-- TSSetInitialTimeStep was deprecated in PETSc 3.8.0, replaced with TSSetTime and TSSetTimeStep
 
--- PetscErrorCode  TSSetDuration(TS ts,PetscInt maxsteps,PetscReal maxtime)
-tsSetDuration' :: TS -> Int -> PetscReal_ -> IO CInt
-tsSetDuration' ts ms' mt =
-  [C.exp|int{TSSetDuration($(TS ts),$(int ms),$(PetscReal mt))}|] 
+-- PetscErrorCode TSSetTime(TS ts, PetscReal time)
+tsSetTime' :: TS -> PetscReal_ -> IO CInt
+tsSetTime' ts t =
+  [C.exp|int{TSSetTime($(TS ts), $(PetscReal t))}|]
+
+-- PetscErrorCode TSSetTimeStep(TS ts, PetscReal time_step)
+tsSetTimeStep' :: TS -> PetscReal_ -> IO CInt
+tsSetTimeStep' ts dt =
+  [C.exp|int{TSSetTimeStep($(TS ts), $(PetscReal dt))}|] 
+
+-- TSSetDuration was deprecated in PETSc 3.8.0, replaced with TSSetMaxSteps and TSSetMaxTime
+
+-- PetscErrorCode TSSetMaxSteps(TS ts, PetscInt maxsteps)
+tsSetMaxSteps' :: TS -> Int -> IO CInt
+tsSetMaxSteps' ts ms' =
+  [C.exp|int{TSSetMaxSteps($(TS ts),$(int ms))}|]
   where
     ms = fromIntegral (ms' :: Int)
+
+-- PetscErrorCode TSSetMaxTime(TS ts, PetscReal maxtime)
+tsSetMaxTime' :: TS -> PetscReal_ -> IO CInt  
+tsSetMaxTime' ts mt =
+  [C.exp|int{TSSetMaxTime($(TS ts),$(PetscReal mt))}|]
 
 
 
@@ -3240,39 +3313,18 @@ tsSetCostGradients' ts numcost lambda mu =
 
 
 
--- PetscErrorCode  TSSetCostIntegrand(TS ts,PetscInt numcost, PetscErrorCode (*rf)(TS,PetscReal,Vec,Vec,void*),
--- PetscErrorCode (*drdyf)(TS,PetscReal,Vec,Vec*,void*),
--- PetscErrorCode (*drdpf)(TS,PetscReal,Vec,Vec*,void*),PetscBool fwd, void *ctx)
-tsSetCostIntegrand0' :: TS
-                        -> PetscInt_
-                        -> (TS -> PetscReal_ -> Vec -> Vec -> Ptr () -> IO CInt)
-                        -> (TS -> PetscReal_ -> Vec -> Ptr Vec -> Ptr () -> IO CInt)
-                        -> (TS -> PetscReal_ -> Vec -> Ptr Vec -> Ptr () -> IO CInt)
-                        -> PetscBool
-                        -> IO CInt
-tsSetCostIntegrand0' ts n rf drdyf drdpf fwdf =
-  [C.exp|
-   int{TSSetCostIntegrand($(TS ts),
-                          $(PetscInt n),
-                          $fun:(int (*rf)(TS,PetscReal,Vec,Vec,void*)),
-                          $fun:(int (*drdyf)(TS,PetscReal,Vec,Vec*,void*)),
-                          $fun:(int (*drdpf)(TS,PetscReal,Vec,Vec*,void*)),$(PetscBool fwdf), NULL)}|]
+-- TSSetCostIntegrand was deprecated in PETSc 3.12.0
+-- Use TSCreateQuadratureTS and TSForwardSetSensitivities instead
 
-tsSetCostIntegrand' :: TS
-                       -> PetscInt_
-                       -> (TS -> PetscReal_ -> Vec -> Vec -> Ptr () -> IO CInt)
-                       -> (TS -> PetscReal_ -> Vec -> Ptr Vec -> Ptr () -> IO CInt)
-                       -> (TS -> PetscReal_ -> Vec -> Ptr Vec -> Ptr () -> IO CInt)
-                       -> PetscBool 
-                       -> Ptr ()
-                       -> IO CInt
-tsSetCostIntegrand' ts n rf drdyf drdpf fwdf ctx =
-  [C.exp|
-   int{TSSetCostIntegrand($(TS ts),
-                          $(PetscInt n),
-                          $fun:(int (*rf)(TS,PetscReal,Vec,Vec,void*)),
-                          $fun:(int (*drdyf)(TS,PetscReal,Vec,Vec*,void*)),
-                          $fun:(int (*drdpf)(TS,PetscReal,Vec,Vec*,void*)),$(PetscBool fwdf), $(void* ctx))}|]  
+-- PetscErrorCode TSCreateQuadratureTS(TS ts, PetscBool fwd, TS *quadts)
+tsCreateQuadratureTS' :: TS -> PetscBool -> IO (TS, CInt)
+tsCreateQuadratureTS' ts fwd = withPtr $ \p -> 
+  [C.exp|int{TSCreateQuadratureTS($(TS ts), $(PetscBool fwd), $(TS* p))}|]
+
+-- PetscErrorCode TSForwardSetSensitivities(TS ts, PetscInt n, Mat A)
+tsForwardSetSensitivities' :: TS -> PetscInt_ -> Mat -> IO CInt
+tsForwardSetSensitivities' ts n a = 
+  [C.exp|int{TSForwardSetSensitivities($(TS ts), $(PetscInt n), $(Mat a))}|]
 
 tsGetCostIntegral' :: TS -> IO (Vec, CInt)
 tsGetCostIntegral' ts = withPtr $ \p -> [C.exp|int{TSGetCostIntegral($(TS ts),$(Vec* p))}|]
@@ -3319,7 +3371,7 @@ tsAdjointSetRHSJacobian0' :: TS
                              -> (TS -> PetscReal_ -> Vec -> Mat -> Ptr () -> IO CInt)
                              -> IO CInt
 tsAdjointSetRHSJacobian0' ts amat f =
-  [C.exp|int{TSAdjointSetRHSJacobian($(TS ts),
+  [C.exp|int{TSSetRHSJacobianP($(TS ts),
                                      $(Mat amat),
                                      $fun:(int (*f)(TS, PetscReal,Vec, Mat, void*)),
                                      NULL)}|]
@@ -3330,7 +3382,7 @@ tsAdjointSetRHSJacobian' :: TS
                             -> Ptr ()
                             -> IO CInt
 tsAdjointSetRHSJacobian' ts amat f ctx =
-  [C.exp|int{TSAdjointSetRHSJacobian($(TS ts),
+  [C.exp|int{TSSetRHSJacobianP($(TS ts),
                                      $(Mat amat),
                                      $fun:(int (*f)(TS, PetscReal,Vec, Mat, void*)),
                                      $(void* ctx))}|]
@@ -3423,7 +3475,7 @@ taoViewStdout' tao = [C.exp|int{TaoView($(Tao tao), PETSC_VIEWER_STDOUT_SELF)}|]
 
 -- TaoSetInitialVector(TaoSolver tao, Vec x);
 taoSetInitialVector' :: Tao -> Vec -> IO CInt
-taoSetInitialVector' tao x = [C.exp|int{TaoSetInitialVector($(Tao tao),$(Vec x))}|] 
+taoSetInitialVector' tao x = [C.exp|int{TaoSetSolution($(Tao tao),$(Vec x))}|] 
 
 -- TaoSolve(TaoSolver tao);
 taoSolve' :: Tao -> IO CInt
@@ -3433,11 +3485,11 @@ taoSolve' tao = [C.exp|int{TaoSolve($(Tao tao))}|]
 
 -- PETSC_EXTERN PetscErrorCode TaoGetSolutionVector(Tao, Vec*);
 taoGetSolutionVector' :: Tao -> IO (Vec, CInt)
-taoGetSolutionVector' tao = withPtr (\p -> [C.exp|int{TaoGetSolutionVector($(Tao tao), $(Vec* p))}|])
+taoGetSolutionVector' tao = withPtr (\p -> [C.exp|int{TaoGetSolution($(Tao tao), $(Vec* p))}|])
 
 -- PETSC_EXTERN PetscErrorCode TaoGetGradientVector(Tao, Vec*);
 taoGetGradientVector' :: Tao -> IO (Vec, CInt)
-taoGetGradientVector' tao = withPtr (\p -> [C.exp|int{TaoGetGradientVector($(Tao tao), $(Vec* p))}|]) 
+taoGetGradientVector' tao = withPtr (\p -> [C.exp|int{TaoGetGradient($(Tao tao), $(Vec* p), NULL, NULL)}|]) 
 
 -- PETSC_EXTERN PetscErrorCode TaoSetObjectiveRoutine(Tao, PetscErrorCode(*)(Tao, Vec, PetscReal*,void*), void*);
 taoSetObjectiveRoutine ::
@@ -3447,7 +3499,7 @@ taoSetObjectiveRoutine ::
 taoSetObjectiveRoutine t f = taoSetObjectiveRoutine' t f' where
   f' ta v r _ = f ta v r
   taoSetObjectiveRoutine' tao ff =
-    [C.exp|int{TaoSetObjectiveRoutine($(Tao tao),
+    [C.exp|int{TaoSetObjective($(Tao tao),
                                       $fun:(int (*ff)(Tao, Vec, PetscReal*, void*)),
                                       NULL)}|]
 
@@ -3458,7 +3510,8 @@ taoSetGradientRoutine :: Tao -> (Tao -> Vec -> Vec -> IO CInt) -> IO CInt
 taoSetGradientRoutine t f = taoSetGradientRoutine' t f' where
   f' ta v r _ = f ta v r
   taoSetGradientRoutine' tao fc =
-    [C.exp|int{TaoSetGradientRoutine($(Tao tao),
+    [C.exp|int{TaoSetGradient($(Tao tao),
+                                     PETSC_NULLPTR,
                                      $fun:(int (*fc)(Tao, Vec, Vec, void*)),
                                      NULL)}|]
   
@@ -3472,8 +3525,9 @@ taoSetObjectiveAndGradientRoutine t f =
   taoSetObjectiveAndGradientRoutine' t f' where
     f' ta v r v2 _ = f ta v r v2
     taoSetObjectiveAndGradientRoutine' tao fc =
-      [C.exp|int{TaoSetObjectiveAndGradientRoutine(
+      [C.exp|int{TaoSetObjectiveAndGradient(
                     $(Tao tao),
+                    PETSC_NULLPTR,
                     $fun:(int (*fc)(Tao, Vec, PetscReal*, Vec, void*)),
                     NULL)}|] 
   
@@ -3486,7 +3540,7 @@ taoSetHessianRoutine ::
 taoSetHessianRoutine t m1 m2 f = taoSetHessianRoutine' t m1 m2 f' where
   f' ta v n1 n2 _ = f ta v n1 n2
   taoSetHessianRoutine' tao m1_ m2_ fc =
-    [C.exp|int{TaoSetHessianRoutine($(Tao tao), $(Mat m1_), $(Mat m2_),
+    [C.exp|int{TaoSetHessian($(Tao tao), $(Mat m1_), $(Mat m2_),
                                     $fun:(int (*fc)(Tao, Vec, Mat, Mat, void*)),
                                     NULL)}|]
 
@@ -4482,7 +4536,7 @@ svdCreate' cc = withPtr $ \s -> [C.exp|int{SVDCreate($(int c),$(SVD* s))}|] wher
   
 -- SVDSetOperator(SVD svd,Mat A);
 svdSetOperator' :: SVD -> Mat -> IO CInt
-svdSetOperator' s matA = [C.exp|int{SVDSetOperator($(SVD s),$(Mat matA))}|]
+svdSetOperator' s matA = [C.exp|int{SVDSetOperators($(SVD s),$(Mat matA),PETSC_NULLPTR)}|]
   
 -- SVDSetFromOptions(SVD svd);
 

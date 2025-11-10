@@ -1,49 +1,45 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, RankNTypes, FlexibleContexts#-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
+
 -----------------------------------------------------------------------------
--- |
--- Module      :  Numerical.PETSc.Internal.PutGet.EPS
--- Copyright   :  (c) Marco Zocca 2015
--- License     :  LGPL3
--- Maintainer  :  zocca . marco . gmail . com
--- Stability   :  experimental
---
--- | EPS Mid-level interface (eigenvalue problem solvers)
---
+
 -----------------------------------------------------------------------------
+
+{- |
+Module      :  Numerical.PETSc.Internal.PutGet.EPS
+Copyright   :  (c) Marco Zocca 2015
+License     :  LGPL3
+Maintainer  :  zocca . marco . gmail . com
+Stability   :  experimental
+
+| EPS Mid-level interface (eigenvalue problem solvers)
+-}
 module Numerical.PETSc.Internal.PutGet.EPS where
 
-import Numerical.PETSc.Internal.InlineC
-import Numerical.PETSc.Internal.Types
 import Numerical.PETSc.Internal.C2HsGen.TypesC2HsGen
 import Numerical.PETSc.Internal.Exception
-import Numerical.PETSc.Internal.Utils
+import Numerical.PETSc.Internal.InlineC
 import qualified Numerical.PETSc.Internal.PutGet.PetscMisc as P
 import qualified Numerical.PETSc.Internal.PutGet.Viewer as View
+import Numerical.PETSc.Internal.Types
+import Numerical.PETSc.Internal.Utils
 
 import Control.Exception (bracket)
 
-import Numerical.PETSc.Internal.PutGet.Vec
 import Numerical.PETSc.Internal.PutGet.Mat
+import Numerical.PETSc.Internal.PutGet.Vec
 
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Storable as VS
 
-
-
-
-
 epsCreate :: Comm -> IO EPS
 epsCreate k = chk1 $ epsCreate' k
- 
-
 
 epsDestroy :: EPS -> IO ()
 epsDestroy e = chk0 $ epsDestroy' e
-
-
-
-
 
 -- | setup
 
@@ -51,19 +47,12 @@ epsDestroy e = chk0 $ epsDestroy' e
 -- generalized eigenproblem : A x = lambda B x
 
 epsSetOperators ::
-  EPS ->
-  Mat ->
-  Maybe Mat -> -- optional operator for generalized eigenproblem
-  IO ()
+    EPS ->
+    Mat ->
+    Maybe Mat -> -- optional operator for generalized eigenproblem
+    IO ()
 epsSetOperators eps matA Nothing = chk0 $ epsSetOperators0' eps matA
 epsSetOperators eps matA (Just matB) = chk0 $ epsSetOperators' eps matA matB
-
-
-
-
-
-
-
 
 epsSetProblemType :: EPS -> EpsProblemType_ -> IO ()
 epsSetProblemType e ty = chk0 $ epsSetProblemType' e ty
@@ -71,192 +60,144 @@ epsSetProblemType e ty = chk0 $ epsSetProblemType' e ty
 epsSetup :: EPS -> IO ()
 epsSetup e = chk0 $ epsSetup' e
 
-
-
-
-
 -- | set # of eigenvalues to compute and subspace dimension
-
 epsSetDimensions ::
-  EPS ->
-  Int ->  -- # eigenvalues
-  Int ->  -- subspace dimensionality
-  Int ->  -- maximum projected dimensionality
-  IO ()
-epsSetDimensions e nev ncv mpd  = chk0 $ epsSetDimensions' e nev ncv mpd
-
-
-
+    EPS ->
+    Int -> -- # eigenvalues
+    Int -> -- subspace dimensionality
+    Int -> -- maximum projected dimensionality
+    IO ()
+epsSetDimensions e nev ncv mpd = chk0 $ epsSetDimensions' e nev ncv mpd
 
 -- | set spectrum interval
-
 epsSetInterval :: EPS -> PetscReal_ -> PetscReal_ -> IO ()
 epsSetInterval e smin smax = chk0 $ epsSetInterval' e smin smax
-
-
-
-
-
 
 -- | various tricks to steer convergence
 
 {-- Specify a basis of vectors that constitute the initial space, that is, the subspace from which the solver starts to iterate.  --}
-epsSetInitialSpace :: VG.Vector v Vec => EPS -> v Vec -> IO ()
+epsSetInitialSpace :: (VG.Vector v Vec) => EPS -> v Vec -> IO ()
 epsSetInitialSpace e ins = chk0 $ epsSetInitialSpace' e ins'
-  where ins' = VG.convert ins
+  where
+    ins' = VG.convert ins
 
 {--When a deflation space is given, the eigensolver seeks the eigensolution in the restriction of the problem to the orthogonal complement of this space. This can be used for instance in the case that an invariant subspace is known beforehand (such as the nullspace of the matrix).
 These vectors do not persist from one EPSSolve() call to the other, so the deflation space should be set every time.
 The vectors do not need to be mutually orthonormal, since they are explicitly orthonormalized internally.--}
-epsSetDeflationSpace :: VG.Vector v Vec => EPS -> v Vec -> IO ()
+epsSetDeflationSpace :: (VG.Vector v Vec) => EPS -> v Vec -> IO ()
 epsSetDeflationSpace e ds = chk0 $ epsSetDeflationSpace' e ds'
-  where ds' = VG.convert ds
-  
-
-
+  where
+    ds' = VG.convert ds
 
 -- | target eigenvalue and eigenpair choice criterion
-
 epsSetWhichEigenpairs :: EPS -> EpsWhich_ -> IO ()
 epsSetWhichEigenpairs e w = chk0 $ epsSetWhichEigenpairs' e w
 
 epsSetTarget :: EPS -> PetscScalar_ -> IO ()
 epsSetTarget e t = chk0 $ epsSetTarget' e t
 
-
-
-
-
-
-
 -- | solve
-
 epsSolve :: EPS -> IO ()
 epsSolve e = chk0 $ epsSolve' e
 
-
-
-
 -- | `with` brackets
-
-
-
 withEpsCreate :: Comm -> (EPS -> IO a) -> IO a
 withEpsCreate k = bracket (epsCreate k) epsDestroy
-  
 
 -- | refer to http://slepc.upv.es/documentation/current/src/eps/examples/tutorials/ex31.c.html for EPS setup + solution
-
-
 withEpsCreateSetup ::
-  Comm ->
-  Mat ->
-  Maybe Mat ->
-  EpsProblemType_ ->
-  ( EPS ->
-    VecRight -> VecLeft ->  -- vector, covector
-    IO a) ->
-  IO a
+    Comm ->
+    Mat ->
+    Maybe Mat ->
+    EpsProblemType_ ->
+    ( EPS ->
+      VecRight ->
+      VecLeft -> -- vector, covector
+      IO a
+    ) ->
+    IO a
 withEpsCreateSetup cc matA mmatB ty post = withEpsCreate cc $ \e -> do
-  epsSetOperators e matA mmatB
-  withVecRL (matCreateVecRight matA) (matCreateVecLeft matA) $ \ vr vl -> do 
-   epsSetProblemType e ty
-   epsSetup e
-   post e vr vl
+    epsSetOperators e matA mmatB
+    withVecRL (matCreateVecRight matA) (matCreateVecLeft matA) $ \vr vl -> do
+        epsSetProblemType e ty
+        epsSetup e
+        post e vr vl
 
 withEpsCreateSetupSolve ::
-  Comm ->
-  Mat ->
-  Maybe Mat -> 
-  EpsProblemType_ ->
-  ( EPS -> 
-    Int ->                 -- # of converged eigenpairs
-    VecRight -> VecLeft -> -- vector, co-vector   
-    IO a) ->
-  IO a
+    Comm ->
+    Mat ->
+    Maybe Mat ->
+    EpsProblemType_ ->
+    ( EPS ->
+      Int -> -- # of converged eigenpairs
+      VecRight ->
+      VecLeft -> -- vector, co-vector
+      IO a
+    ) ->
+    IO a
 withEpsCreateSetupSolve cc a b ty postsolve =
-  withEpsCreateSetup cc a b ty $ \e vr vl -> do
-   epsSolve e
-   nconv <- epsGetConverged e
-   postsolve e nconv vr vl
-
-
-
+    withEpsCreateSetup cc a b ty $ \e vr vl -> do
+        epsSolve e
+        nconv <- epsGetConverged e
+        postsolve e nconv vr vl
 
 -- | Vec brackets compatible with vectors and covectors, resp.:
 withEpsVecRight :: EPS -> (VecRight -> IO a) -> IO a
 withEpsVecRight e fm = do
-  mat <- epsGetOperators0 e 
-  withVecRight (matCreateVecRight mat) fm
+    mat <- epsGetOperators0 e
+    withVecRight (matCreateVecRight mat) fm
 
 withEpsVecLeft :: EPS -> (VecLeft -> IO a) -> IO a
 withEpsVecLeft e fm = do
-  mat <- epsGetOperators0 e 
-  withVecLeft (matCreateVecLeft mat) fm
-
-
-
-
+    mat <- epsGetOperators0 e
+    withVecLeft (matCreateVecLeft mat) fm
 
 -- | # of converged eigenpairs
-
 epsGetConverged :: EPS -> IO Int
 epsGetConverged eps = fmap fi (chk1 $ epsGetConverged' eps)
 
-
-
-
-
 -- | get eigenvalues and eigenvectors
 epsGetEigenvalue ::
-  EPS ->
-  Int ->                          -- # eigenpair
-  IO (PetscScalar_, PetscScalar_) -- (real, imag) 
-epsGetEigenvalue eps ii = chk1 $ epsGetEigenvalue' eps (toCInt ii)
+    EPS ->
+    Int -> -- # eigenpair
+    IO (PetscScalar_, PetscScalar_) -- (real, imag)
+epsGetEigenvalue eps ii = chk1 $ epsGetEigenvalue' eps (fromIntegral (toCInt ii))
 
 withEpsGetEigenvector ::
-  EPS ->
-  Int ->         -- # eigenpair
-  ( VecRight ->  -- real part
-    VecRight ->  -- imag part
-    IO a) ->
-  IO a
-withEpsGetEigenvector eps ii fme = withEpsVecRight eps $ \(VecRight vvr) -> 
-  withVecClone vvr $ \vvi -> do
-   chk0 $ epsGetEigenvector' eps (toCInt ii) vvr vvi
-   fme (VecRight vvr) (VecRight vvi)
-
-
+    EPS ->
+    Int -> -- # eigenpair
+    ( VecRight -> -- real part
+      VecRight -> -- imag part
+      IO a
+    ) ->
+    IO a
+withEpsGetEigenvector eps ii fme = withEpsVecRight eps $ \(VecRight vvr) ->
+    withVecClone vvr $ \vvi -> do
+        chk0 $ epsGetEigenvector' eps (fromIntegral (toCInt ii)) vvr vvi
+        fme (VecRight vvr) (VecRight vvi)
 
 -- | traverse converged eigenpairs and collect results in a V.Vector
-
 withEpsConvergedEigenpairs :: EPS -> (EPS -> Int -> IO a) -> IO (V.Vector a)
 withEpsConvergedEigenpairs eps fm = do
-  nev <- epsGetConverged eps
-  tr <- traverse (fm eps) [0..nev-1]
-  return (V.fromList tr)
+    nev <- epsGetConverged eps
+    tr <- traverse (fm eps) [0 .. nev - 1]
+    return (V.fromList tr)
 
 epsGetEigenvalues :: EPS -> IO (V.Vector (PetscScalar_, PetscScalar_))
 epsGetEigenvalues eps = withEpsConvergedEigenpairs eps epsGetEigenvalue
 
 withEpsEigenvectors :: EPS -> (VecRight -> VecRight -> IO a) -> IO (V.Vector a)
 withEpsEigenvectors eps fm =
-  withEpsConvergedEigenpairs eps $ \e i ->
-   withEpsGetEigenvector e i fm
-  
-
+    withEpsConvergedEigenpairs eps $ \e i ->
+        withEpsGetEigenvector e i fm
 
 -- | check properties of eigensolution
-
 epsComputeError :: EPS -> Int -> EpsErrorType_ -> IO PetscReal_
 epsComputeError eps i ty = chk1 $ epsComputeError' eps i ty
 
 epsIsHermitian, epsIsPositive :: EPS -> IO PetscBool
 epsIsHermitian = chk1 . epsIsHermitian'
 epsIsPositive = chk1 . epsIsPositive'
-
-
-
 
 -- -- retrieve
 epsGetOperators0 :: EPS -> IO Mat
@@ -265,33 +206,12 @@ epsGetOperators0 eps = chk1 $ epsGetOperators0' eps
 epsGetOperators :: EPS -> IO (Mat, Mat)
 epsGetOperators eps = chk1 $ epsGetOperators' eps
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- | viewers
-
 epsView :: EPS -> PetscViewer -> IO ()
 epsView e viewer = chk0 $ epsView' e viewer
 
-epsViewStdout :: EPS  -> IO ()
+epsViewStdout :: EPS -> IO ()
 epsViewStdout v = View.withPetscViewerTypeFmt P.commWorld ViewerAscii ViewFmtAsciiInfoDetail (epsView v)
 
 epsVectorsView :: EPS -> PetscViewer -> IO ()
 epsVectorsView e viewer = chk0 $ epsVectorsView' e viewer
-
-
-
-
-
-
-

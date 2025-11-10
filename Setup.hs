@@ -26,8 +26,8 @@ import System.Process
 -- | currently supported
 
 petsc, slepc :: Dep 
-petsc = mkDep Petsc 3 7 2
-slepc = mkDep Slepc 3 7 1
+petsc = mkDep Petsc 3 22 5
+slepc = mkDep Slepc 3 22 2
 
 
 

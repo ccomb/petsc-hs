@@ -358,7 +358,7 @@ dmdaCreate cc = chk1 (dmdaCreate' cc)
 --   IO DM
 dmdaCreate1d cc b mm dof sw lx =
   chk1 (dmdaCreate1d' cc b mm' dof' sw' lx') where
-    (mm', dof', sw', lx') = (toCInt mm, toCInt dof, toCInt sw, map toCInt lx)
+    (mm', dof', sw', lx') = (fromIntegral (toCInt mm), fromIntegral (toCInt dof), fromIntegral (toCInt sw), map (fromIntegral . toCInt) lx)
 
 -- dmdaCreate1d0 ::  -- lx = NULL
 --   Comm ->             
@@ -369,7 +369,7 @@ dmdaCreate1d cc b mm dof sw lx =
 --   IO DM
 dmdaCreate1d0 cc b mm dof sw =
   chk1 (dmdaCreate1d0' cc b mm' dof' sw') where
-    (mm', dof', sw') = (toCInt mm, toCInt dof, toCInt sw)
+    (mm', dof', sw') = (fromIntegral (toCInt mm), fromIntegral (toCInt dof), fromIntegral (toCInt sw))
 
 -- dmdaCreate2d ::
 --   Comm ->
@@ -381,7 +381,7 @@ dmdaCreate1d0 cc b mm dof sw =
 --   IO DM
 dmdaCreate2d cc (bx, by) sten (mm, nn) dof s =
   chk1 (dmdaCreate2d' cc bx by sten mm' nn' dof' s') where
-    (mm', nn', dof', s') = (toCInt mm, toCInt nn, toCInt dof, toCInt s)
+    (mm', nn', dof', s') = (fromIntegral (toCInt mm), fromIntegral (toCInt nn), fromIntegral (toCInt dof), fromIntegral (toCInt s))
 
 
 
@@ -422,7 +422,7 @@ withDmdaVecArrayPtr dm v = bracket (dmvga dm v) (dmvra dm v) where
 
 dmdaSetSizes :: DM -> Int -> Int -> Int -> IO ()
 dmdaSetSizes dm x y z = chk0 (dmdaSetSizes' dm x' y' z') where
-  (x',y',z') = all3 (x, y, z) toCInt
+  (x',y',z') = all3 (x, y, z) (fromIntegral . toCInt)
 
 dmdaSetUniformCoordinates ::
   DM ->
@@ -585,10 +585,10 @@ dmdaGetInfo3d ::
 dmdaGetInfo3d da = do
   (d,(mm,nn,pp),(m,n,p),dof,s,(bx,by,bz),sten) <- dmdaGetInfoCInt da
   let
-    dim = fi d
-    dims = (fi mm,fi nn, fi pp)
-    procsPerDim = (fi m, fi n, fi p)
-    (ndof, ss) = (fi dof, fi s)
+    dim = fromIntegral d
+    dims = (fromIntegral mm, fromIntegral nn, fromIntegral pp)
+    procsPerDim = (fromIntegral m, fromIntegral n, fromIntegral p)
+    (ndof, ss) = (fromIntegral dof, fromIntegral s)
     bdries = (dmBoundaryTypeFromC bx,
               dmBoundaryTypeFromC by,
               dmBoundaryTypeFromC bz)
@@ -619,7 +619,7 @@ dmdaGetCorners1d ::
       Int)     -- # entries
 dmdaGetCorners1d dm = do
   t <- chk1 $ dmdaGetCorners1d' dm >>= \x -> return $ f1d x
-  return $ fromIntegralTup t
+  return $ both t fromIntegral
 
 dmdaGetCorners2d ::
   DM ->
@@ -629,13 +629,13 @@ dmdaGetCorners2d ::
        Int))   -- ", # entries
 dmdaGetCorners2d dm = do
   x <- chk1 $ dmdaGetCorners2d' dm >>= \x -> return $ f2d x
-  return $ fromIntegralTup2 x
+  return $ both x (\(a,b) -> (fromIntegral a, fromIntegral b))
 
 dmdaGetCorners3d ::
   DM -> IO ((Int,Int,Int), (Int,Int,Int))
 dmdaGetCorners3d dm = do
   x <- chk1 $ dmdaGetCorners3d' dm >>= \x -> return $ f3d x
-  return $ fromIntegralTup3 x
+  return $ both x (`all3` fromIntegral)
 
 
 -- -- "ghost" corners (i.e. local copies of mesh entries pertaining to other processes)
@@ -646,7 +646,7 @@ dmdaGetGhostCorners1d ::
       Int)     -- # entries
 dmdaGetGhostCorners1d dm = do 
   t <- chk1 $ dmdaGetCorners1d' dm >>= \x -> return $ f1d x
-  return $ fromIntegralTup t
+  return $ both t fromIntegral
 
 dmdaGetGhostCorners2d ::
   DM ->
@@ -656,14 +656,14 @@ dmdaGetGhostCorners2d ::
        Int))   -- ", # entries
 dmdaGetGhostCorners2d dm = do 
   t <- chk1 $ dmdaGetCorners2d' dm >>= \x -> return $ f2d x
-  return $ fromIntegralTup2 t
+  return $ both t (\(a,b) -> (fromIntegral a, fromIntegral b))
 
 
 dmdaGetGhostCorners3d ::
   DM -> IO ((Int,Int,Int), (Int,Int,Int))
 dmdaGetGhostCorners3d dm = do
   x <- chk1 $ dmdaGetGhostCorners3d' dm >>= \x -> return $ f3d x
-  return $ fromIntegralTup3 x
+  return $ both x (`all3` fromIntegral)
 
 
 

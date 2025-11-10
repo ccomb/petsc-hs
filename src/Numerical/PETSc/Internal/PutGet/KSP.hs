@@ -1,20 +1,22 @@
 -----------------------------------------------------------------------------
--- |
--- Module      :  Numerical.PETSc.Internal.PutGet.KSP
--- Copyright   :  (c) Marco Zocca 2015
--- License     :  LGPL3
--- Maintainer  :  zocca . marco . gmail . com
--- Stability   :  experimental
---
--- | KSP Mid-level interface
---
+
 -----------------------------------------------------------------------------
+
+{- |
+Module      :  Numerical.PETSc.Internal.PutGet.KSP
+Copyright   :  (c) Marco Zocca 2015
+License     :  LGPL3
+Maintainer  :  zocca . marco . gmail . com
+Stability   :  experimental
+
+| KSP Mid-level interface
+-}
 module Numerical.PETSc.Internal.PutGet.KSP where
 
-import Numerical.PETSc.Internal.InlineC
-import Numerical.PETSc.Internal.Types
 import Numerical.PETSc.Internal.C2HsGen.TypesC2HsGen
 import Numerical.PETSc.Internal.Exception
+import Numerical.PETSc.Internal.InlineC
+import Numerical.PETSc.Internal.Types
 import Numerical.PETSc.Internal.Utils
 
 import Numerical.PETSc.Internal.PutGet.Vec
@@ -24,24 +26,20 @@ import Foreign.C.Types
 
 import System.IO.Unsafe (unsafePerformIO)
 
-import Control.Monad
 import Control.Arrow
 import Control.Concurrent
 import Control.Exception
+import Control.Monad
 
 import Control.Monad.ST (ST, runST)
 import Control.Monad.ST.Unsafe (unsafeIOToST) -- for HMatrix bits
 
 import qualified Data.Vector as V
-import qualified Data.Vector.Storable as V (unsafeWith, unsafeFromForeignPtr, unsafeToForeignPtr)
-
-
+import qualified Data.Vector.Storable as V (unsafeFromForeignPtr, unsafeToForeignPtr, unsafeWith)
 
 -- | create KSP
-
 kspCreate :: Comm -> IO KSP
 kspCreate cc = chk1 (kspCreate' cc)
-
 
 -- | with KSP brackets
 
@@ -58,10 +56,10 @@ withKsp cc = withKsp_ (kspCreate cc)
 withKspSetup ::
   Comm ->
   KspType_ ->
-  Mat ->            -- linear operator
-  Mat ->            -- preconditioner
-  Bool ->           -- set initial solution guess to nonzero vector
-  (KSP -> IO a) ->  -- post-setup actions, i.e. solve with a r.h.s , etc.
+  Mat -> -- linear operator
+  Mat -> -- preconditioner
+  Bool -> -- set initial solution guess to nonzero vector
+  (KSP -> IO a) -> -- post-setup actions, i.e. solve with a r.h.s , etc.
   IO a
 withKspSetup cc kt amat pmat ignz f = withKsp cc $ \ksp -> do
   kspSetOperators ksp amat pmat
@@ -73,66 +71,95 @@ withKspSetup cc kt amat pmat ignz f = withKsp cc $ \ksp -> do
 withKspSetupSolve ::
   Comm ->
   KspType_ ->
-  Mat ->            -- linear operator
-  Mat ->            -- preconditioner
-  Bool ->           -- set initial solution guess to nonzero vector
-  Vec ->            -- r.h.s
-  Vec ->            -- solution (WILL BE OVERWRITTEN)
-  (KSP -> IO a) ->  -- post-solve actions
+  Mat -> -- linear operator
+  Mat -> -- preconditioner
+  Bool -> -- set initial solution guess to nonzero vector
+  Vec -> -- r.h.s
+  Vec -> -- solution (WILL BE OVERWRITTEN)
+  (KSP -> IO a) -> -- post-solve actions
   IO a
 withKspSetupSolve cc kt amat pmat ignz rhsv solnv post =
-  -- withVecDuplicate rhsv $ \solnv -> 
+  -- withVecDuplicate rhsv $ \solnv ->
   withKspSetup cc kt amat pmat ignz $ \ksp -> do
     kspSolve ksp rhsv solnv
     post ksp
 
 -- | allocate space for solution internally
 withKspSetupSolveAlloc ::
-  Comm -> KspType_ -> Mat -> Mat -> Vec -> (KSP -> Vec -> IO a ) -> IO a
-withKspSetupSolveAlloc cc kt amat pmat rhsv post =
+  Comm -> KspType_ -> Mat -> Mat -> Bool -> Vec -> (KSP -> Vec -> IO a) -> IO a
+withKspSetupSolveAlloc cc kt amat pmat ignz rhsv post =
   withVecDuplicate rhsv $ \soln ->
-  withKspSetupSolve cc kt amat pmat True rhsv soln $ \ksp ->
-  post ksp soln
+    withKspSetupSolve cc kt amat pmat ignz rhsv soln $ \ksp ->
+      post ksp soln
 
+-- | KSP setup that uses PETSC_OPTIONS for configuration (no hardcoded type)
+withKspSetupFromOptions ::
+  Comm ->
+  Mat -> -- linear operator
+  Mat -> -- preconditioner
+  Bool -> -- set initial solution guess to nonzero vector
+  (KSP -> IO a) -> -- post-setup actions
+  IO a
+withKspSetupFromOptions cc amat pmat ignz f = withKsp cc $ \ksp -> do
+  kspSetOperators ksp amat pmat
+  kspSetFromOptions ksp  -- Read PETSC_OPTIONS instead of hardcoding type
+  pc <- kspGetPC ksp
+  pcSetFromOptions pc    -- Configure preconditioner from PETSC_OPTIONS (enables MUMPS options)
+  kspSetInitialGuessNonzero ksp ignz
+  kspSetUp ksp
+  f ksp
 
+-- | KSP setup and solve that uses PETSC_OPTIONS
+withKspSetupSolveFromOptions ::
+  Comm ->
+  Mat -> -- linear operator
+  Mat -> -- preconditioner
+  Bool -> -- set initial solution guess to nonzero vector
+  Vec -> -- r.h.s
+  Vec -> -- solution (WILL BE OVERWRITTEN)
+  (KSP -> IO a) -> -- post-solve actions
+  IO a
+withKspSetupSolveFromOptions cc amat pmat ignz rhsv solnv post =
+  withKspSetupFromOptions cc amat pmat ignz $ \ksp -> do
+    kspSolve ksp rhsv solnv
+    post ksp
 
-
-
+-- | allocate space for solution internally, using PETSC_OPTIONS
+withKspSetupSolveAllocFromOptions ::
+  Comm -> Mat -> Mat -> Bool -> Vec -> (KSP -> Vec -> IO a) -> IO a
+withKspSetupSolveAllocFromOptions cc amat pmat ignz rhsv post =
+  withVecDuplicate rhsv $ \soln ->
+    withKspSetupSolveFromOptions cc amat pmat ignz rhsv soln $ \ksp ->
+      post ksp soln
 
 -- withKsp cs $ \ksp -> do
-     --   kspSetOperators ksp mat mat
-     --   kspSetType ksp km 
-     --   kspSetInitialGuessNonzero ksp True
-     --   kspSetUp ksp
-     --   kspSolve ksp x v
-     --   soln <- kspGetSolution ksp
-     --   -- vecViewStdout soln
-     --   showKspStats ksp km
-     --   -- kspReasonView ksp
-     --   -- return soln
-
-
-
-    
+--   kspSetOperators ksp mat mat
+--   kspSetType ksp km
+--   kspSetInitialGuessNonzero ksp True
+--   kspSetUp ksp
+--   kspSolve ksp x v
+--   soln <- kspGetSolution ksp
+--   -- vecViewStdout soln
+--   showKspStats ksp km
+--   -- kspReasonView ksp
+--   -- return soln
 
 -- | destroy KSP
-
 kspDestroy :: KSP -> IO ()
 kspDestroy ksp = chk0 (kspDestroy' ksp)
 
-
-
-
-
-
-
 -- | set KSP properties
-
 kspSetType :: KSP -> KspType_ -> IO ()
 kspSetType ksp kt = chk0 (kspSetType' ksp kt)
 
+kspSetFromOptions :: KSP -> IO ()
+kspSetFromOptions ksp = chk0 (kspSetFromOptions' ksp)
 
+kspGetPC :: KSP -> IO PC
+kspGetPC ksp = chk1 (kspGetPc' ksp)
 
+pcSetFromOptions :: PC -> IO ()
+pcSetFromOptions pc = chk0 (pcSetFromOptions' pc)
 
 kspSetOperators :: KSP -> Mat -> Mat -> IO ()
 kspSetOperators ksp amat pmat = chk0 (kspSetOperators' ksp amat pmat)
@@ -143,9 +170,10 @@ kspSetInitialGuessNonzero ksp ig = chk0 (kspSetInitialGuessNonzero' ksp ig)
 kspSetUp :: KSP -> IO ()
 kspSetUp ksp = chk0 (kspSetUp' ksp)
 
-kspSolve, kspSolveTranspose :: 
-  KSP -> Vec -> Vec -> IO ()
-kspSolve ksp rhsv solnv =  chk0 (kspSolve' ksp rhsv solnv)
+kspSolve
+  , kspSolveTranspose ::
+    KSP -> Vec -> Vec -> IO ()
+kspSolve ksp rhsv solnv = chk0 (kspSolve' ksp rhsv solnv)
 kspSolveTranspose ksp rhsv solnv = chk0 (kspSolve' ksp rhsv solnv)
 
 kspSetReusePreconditioner :: KSP -> PetscBool -> IO ()
@@ -153,8 +181,8 @@ kspSetReusePreconditioner ksp b = chk0 (kspSetReusePreconditioner' ksp b)
 
 kspGetTolerances :: KSP -> IO (Double, Double, Double, Int)
 kspGetTolerances ksp = do
-  (rtol, abstol, dtol, maxits) <- chk1 ( kspGetTolerances0' ksp )
-  return (fromCDouble rtol, fromCDouble abstol, fromCDouble dtol, fi maxits)
+  (rtol, abstol, dtol, maxits) <- chk1 (kspGetTolerances0' ksp)
+  return (fromCDouble rtol, fromCDouble abstol, fromCDouble dtol, fromIntegral maxits)
 
 kspSetTolerances :: KSP -> Double -> Double -> Double -> Int -> IO ()
 kspSetTolerances ksp rtol abstol dtol maxits =
@@ -176,12 +204,6 @@ kspGetResidualNorm ksp = chk1 (kspGetResidualNorm' ksp)
 
 kspGetIterationNumber :: KSP -> IO CInt
 kspGetIterationNumber ksp = chk1 (kspGetIterationNumber' ksp)
-
-
-
-
-
-
 
 kspGetPc :: KSP -> IO PC
 kspGetPc k = chk1 (kspGetPc' k)
