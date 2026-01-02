@@ -28,10 +28,11 @@ source-repository head
 
 
 library
-  exposed-modules:     Numerical.PETSc, 
+  exposed-modules:     Numerical.PETSc,
                        Numerical.PETSc.Spec
                        Numerical.PETSc.Test
-  other-modules:       Numerical.PETSc.Internal
+                       Numerical.PETSc.Internal
+  other-modules:
                        Numerical.PETSc.Internal.Exception
                        Numerical.PETSc.Internal.InlineC                         
                        Numerical.PETSc.Internal.InlineCInternal
@@ -50,21 +51,25 @@ library
                        Numerical.PETSc.Internal.PutGet.SlepcMisc
                        Numerical.PETSc.Internal.PutGet.EPS
                        Numerical.PETSc.Internal.PutGet.SVD
-                       Numerical.PETSc.Internal.PutGet
+                       Numerical.PETSc.Internal.PutGet.SF
+                       Numerical.PETSc.Internal.PutGet.PF
                        Numerical.PETSc.Internal.Sparse
                        Numerical.PETSc.Internal.Storable.Common
                        Numerical.PETSc.Internal.Storable.Vector
+                       Numerical.PETSc.Internal.Storable.Matrix
+                       Numerical.PETSc.Internal.Storable.StorableContainer
+                       Numerical.PETSc.Internal.Storable.Store
                        Numerical.PETSc.Internal.Types
                        Numerical.PETSc.Internal.C2HsGen.TypesC2HsGen
                        Numerical.PETSc.Internal.Utils
                        Numerical.PETSc.Internal.Product
                        Numerical.PETSc.Internal.Sized
-  build-depends:       base >=4.7,
+  build-depends:       base >=4.7 && <5,
                        template-haskell,
-                       containers >=0.5 && <0.6, 
+                       containers >=0.5 && <0.8,
                        QuickCheck >=2.7,
                        hspec,
-                       bytestring >=0.10 && <0.11, 
+                       bytestring >=0.10 && <0.13, 
                        transformers,
                        transformers-base,
                        contravariant,

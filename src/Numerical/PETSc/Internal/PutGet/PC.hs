@@ -19,3 +19,6 @@ import Numerical.PETSc.Internal.Utils
 
 pcSetType :: PC -> PCType_ -> IO ()
 pcSetType pc pct = chk0 $ pcSetType' pc pct
+
+pcSetFromOptions :: PC -> IO ()
+pcSetFromOptions pc = chk0 $ pcSetFromOptions' pc

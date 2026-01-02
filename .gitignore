@@ -10,4 +10,5 @@
 .stack-work/
 cabal.config
 cabal.sandbox.config
-.hsenv
+.hsenvcabal.project.local
+src/Numerical/PETSc/Internal/C2HsGen/TypesC2HsGen.hs

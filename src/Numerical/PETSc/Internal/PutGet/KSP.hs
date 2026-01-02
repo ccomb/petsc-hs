@@ -185,3 +185,6 @@ kspGetIterationNumber ksp = chk1 (kspGetIterationNumber' ksp)
 
 kspGetPc :: KSP -> IO PC
 kspGetPc k = chk1 (kspGetPc' k)
+
+kspSetFromOptions :: KSP -> IO ()
+kspSetFromOptions ksp = chk0 (kspSetFromOptions' ksp)
