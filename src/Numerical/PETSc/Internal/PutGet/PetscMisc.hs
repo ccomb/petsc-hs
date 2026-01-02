@@ -267,15 +267,13 @@ petscHeader =
 
 
 -- | Version string
+-- PETSc 3.24 returns: "PETSc Release Version 3.24.2, Nov 29, 2025"
 
 {-# NOINLINE petscVersionString #-}
 petscVersionString :: String
-petscVersionString = ver ++ ", rel. " ++ date
+petscVersionString = vstrRaw
   where
-    ver = strs!!3
-    date = unwords [strs!!5, strs!!7, strs!!9]
-    strs = splitOneOf ", " vstrRaw
-    vstrRaw = unsafePerformIO (petscGetVersion 50)
+    vstrRaw = unsafePerformIO (petscGetVersion 100)
 
 petscGetVersion :: Int -> IO String
 petscGetVersion l = do
