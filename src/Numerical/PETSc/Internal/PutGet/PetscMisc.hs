@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -----------------------------------------------------------------------------
@@ -81,6 +82,7 @@ import Control.Monad.Trans.Reader
 import Control.Arrow ((&&&), (***))
 
 import System.Process (readProcess)
+import Language.Haskell.TH.Syntax (runIO, lift)
 
 -- a `reader` bracket for reading MPI environmemt information
 
@@ -238,11 +240,17 @@ isMpiRoot :: MPIComm -> Bool
 isMpiRoot c = getMPICommRank c == 0
 
 {- | git commit hash (for debugging)
-Hp: `git` command is available
+Evaluated at compile time via Template Haskell.
+Returns "(unknown)" if git is not available during compilation.
 -}
-{-# NOINLINE gitHash #-}
 gitHash :: String
-gitHash = unsafePerformIO $ readProcess "git" ["rev-parse", "--verify", "HEAD"] []
+gitHash = $(do
+    let trim = reverse . dropWhile (== '\n') . reverse
+    result <- runIO $ catch
+        (trim <$> readProcess "git" ["rev-parse", "--verify", "HEAD"] [])
+        (\(_ :: SomeException) -> return "(unknown)")
+    lift result
+  )
 
 -- | header
 sep, petscHeader :: String
