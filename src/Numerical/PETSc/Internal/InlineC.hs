@@ -2346,21 +2346,10 @@ kspSetComputeRHS__' ksp f = kspSetComputeRHS_' ksp g where
 kspGetPc' :: KSP -> IO (PC, CInt)
 kspGetPc' k = withPtr $ \pc -> [C.exp|int{KSPGetPC($(KSP k),$(PC* pc))}|]
 
--- PetscErrorCode KSPSetFromOptions(KSP ksp)
-kspSetFromOptions' :: KSP -> IO CInt
-kspSetFromOptions' ksp = [C.exp|int{KSPSetFromOptions($(KSP ksp))}|]
-
-
-
-
 -- * PC
 pcSetType' :: PC -> PCType_ -> IO CInt
 pcSetType' pc pct = withCString t $ \tp -> [C.exp|int{PCSetType($(PC pc),$(char* tp))}|] where
   t = pcTypeToString pct
-
--- PetscErrorCode PCSetFromOptions(PC pc)
-pcSetFromOptions' :: PC -> IO CInt
-pcSetFromOptions' pc = [C.exp|int{PCSetFromOptions($(PC pc))}|]
   
 
 
