@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -82,7 +83,7 @@ import Control.Monad.Trans.Reader
 import Control.Arrow ((&&&), (***))
 
 import System.Process (readProcess)
-import Language.Haskell.TH.Syntax (runIO, lift)
+import qualified Language.Haskell.TH.Syntax as TH
 
 -- a `reader` bracket for reading MPI environmemt information
 
@@ -246,10 +247,10 @@ Returns "(unknown)" if git is not available during compilation.
 gitHash :: String
 gitHash = $(do
     let trim = reverse . dropWhile (== '\n') . reverse
-    result <- runIO $ catch
+    result <- TH.runIO $ catch
         (trim <$> readProcess "git" ["rev-parse", "--verify", "HEAD"] [])
         (\(_ :: SomeException) -> return "(unknown)")
-    lift result
+    TH.lift result
   )
 
 -- | header
