@@ -20,6 +20,7 @@ import Numerical.PETSc.Internal.Types
 import Numerical.PETSc.Internal.Utils
 
 import Numerical.PETSc.Internal.PutGet.Vec
+import Numerical.PETSc.Internal.PutGet.PC (pcSetFromOptions)
 
 import Foreign
 import Foreign.C.Types
