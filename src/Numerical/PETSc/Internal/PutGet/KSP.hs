@@ -158,9 +158,6 @@ kspSetFromOptions ksp = chk0 (kspSetFromOptions' ksp)
 kspGetPC :: KSP -> IO PC
 kspGetPC ksp = chk1 (kspGetPc' ksp)
 
-pcSetFromOptions :: PC -> IO ()
-pcSetFromOptions pc = chk0 (pcSetFromOptions' pc)
-
 kspSetOperators :: KSP -> Mat -> Mat -> IO ()
 kspSetOperators ksp amat pmat = chk0 (kspSetOperators' ksp amat pmat)
 
